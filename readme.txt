@@ -1,5 +1,5 @@
 === U More Recent Posts ===
-Contributors: Taehan Lee
+Contributors: taehan
 Donate link: 
 Tags: widget, sidebar, post, recent posts, posts list, pager, paginate, navigate, navigation, ajax
 Requires at least: 2.8.0
