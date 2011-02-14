@@ -1,0 +1,48 @@
+.umrp-content ul {
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+}
+.umrp-loader {
+}
+
+/* navi ----------------------------------- */
+.umrp-nav-top {
+	margin-bottom: 10px;
+}
+.umrp-nav-bottom {
+	margin-top: 10px;
+}
+.umrp-nav.left {
+	text-align: left;
+}
+.umrp-nav.center {
+	text-align: center;
+}
+.umrp-nav.right {
+	text-align: right;
+}
+.umrp-nav em {
+	/* current page link */
+	font-style: normal;
+	font-weight: bold;
+}
+.umrp-nav a {
+}
+
+/* navi design sample ----------------------------------- */
+/*
+.umrp-nav em,
+.umrp-nav a {
+	font-size: 11px;
+	padding: 1px 3px;
+	border: 1px solid #ccc;
+	background-color: #FFF;
+	text-decoration: none;
+}
+.umrp-nav em,
+.umrp-nav a:hover {
+	border-color: #3E89AF;
+	background-color: #3E89AF;
+	color: white;
+}
+*/
