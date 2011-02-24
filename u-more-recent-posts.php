@@ -3,7 +3,7 @@
 Plugin Name: U More Recent Posts
 Plugin URI: http://urlless.com/wordpress-plugin-u-more-recent-posts/
 Description: Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
-Version: 1.1
+Version: 1.1.1
 Author: Taehan Lee
 Author URI: http://urlless.com
 */ 
@@ -12,10 +12,8 @@ global $wp_version;
 if (version_compare($wp_version, "2.8", "<")) wp_die("This plugin requires WordPress version 2.8 or higher.");
 
 class UMoreRecentPosts {
-	
 	// domain => umrp
 	var $plugin_url;
-	var $options;
 	
 	function UMoreRecentPosts(){
 		$this->plugin_url = plugin_dir_url(__FILE__);
@@ -24,7 +22,6 @@ class UMoreRecentPosts {
 		add_action( 'wp_ajax_umrp-ajax', array(&$this, 'ajax') );
 		add_action( 'wp_ajax_nopriv_umrp-ajax', array(&$this, 'ajax') );
 	}
-	
 	
 	function init() { 
 		if ( ! is_admin() ) {
@@ -44,71 +41,69 @@ class UMoreRecentPosts {
 	
 	function ajax() {
 		check_ajax_referer( 'umrp_nonce' );
+		$this->the_list( $_POST['widget_id'], $_POST['paged'] );
+		die();
+	}
+	
+	function get_widget_option($widget_id){
+		$opts = get_option('widget_umrp');
+		$widget_id = preg_replace('/umrp-/', '', $widget_id);
+		return $opts[intval($widget_id)];
+	}
+	
+	function the_list( $widget_id, $paged='' ){
+		$opts = $this->get_widget_option($widget_id);
 		
-		switch( $_POST['scope'] ):
+		$args = array(
+			'posts_per_page' => !empty($opts['number']) ? $opts['number'] : 5,
+			'paged' => !empty($paged) ? $paged : '', 
+			'nopaging' => 0, 
+			'post_status' => 'publish', 
+			'caller_get_posts' => 1
+		);
+		if( ! empty($opts['exclude']) ) $args['category__not_in'] = explode(',', $opts['exclude']);
+		if( ! empty($opts['include']) ) $args['category__in'] = explode(',', $opts['include']);
+		
+		$r = new WP_Query($args);
+		if($r->have_posts()): 
+			$pager = $this->pager( array(
+				'posts_per_page' => $args['posts_per_page'],
+				'paged' => $args['paged'],
+				'found_posts' => $r->found_posts,
+				'page_range' => $opts['page_range']
+			) );
+			if( $pager ){
+				$pager = $opts['navi_label'] . ' ' . $pager;
+			}
+			if( $pager AND ($opts['navi_pos']=='top' || $opts['navi_pos']=='both') ) {
+				echo '<div class="umrp-nav umrp-nav-top '.$opts['navi_align'].'">'.$pager.'</div>';
+			}
 			
-			case 'get_option':
-				$opts = get_option('widget_umrp');
-				$opt = $opts[intval($_POST['widget_id'])];
-				die( json_encode($opt) );
-				break;
-				
-			case 'get_list':
-				$args = array(
-					'posts_per_page' => intval( $_POST['number'] ) ? $_POST['number'] : 5,
-					'paged' => $_POST['paged'], 
-					'nopaging' => 0, 
-					'post_status' => 'publish', 
-					'caller_get_posts' => 1
-				);
-				if( ! empty($_POST['exclude']) ) $args['category__not_in'] = explode(',', $_POST['exclude']);
-				if( ! empty($_POST['include']) ) $args['category__in'] = explode(',', $_POST['include']);
-				
-				$r = new WP_Query($args);
-				if($r->have_posts()): 
-					$pager = $this->pager( array(
-						'posts_per_page' => $args['posts_per_page'],
-						'paged' => $args['paged'],
-						'found_posts' => $r->found_posts,
-						'page_range' => $_POST['page_range']
-					) );
-					if( $pager ){
-						$pager = $_POST['navi_label'] . ' ' . $pager;
-					}
-					if( $pager AND ($_POST['navi_pos']=='top' || $_POST['navi_pos']=='both') ) {
-						echo '<div class="umrp-nav umrp-nav-top '.$_POST['navi_align'].'">'.$pager.'</div>';
-					}
-					
-					echo '<ul>';
-					while($r->have_posts()): $r->the_post();
-					
-					$title = get_the_title() ? get_the_title() : get_the_ID();
-					$title = apply_filters('the_title', $title);
-					$title_attr = esc_attr($title);
-					
-					$word_limit = isset($_POST['length']) ? intval($_POST['length']) : 0;
-					if( $word_limit>0 ){
-						$words = explode(' ',$title);
-						if(count($words) > $word_limit) {
-							array_splice($words, $word_limit);
-		    				$title = implode(' ', $words) . '&hellip;';
-		    			}
-	    			}
-					?>
-					<li><a href="<?php the_permalink() ?>" title="<?php echo $title_attr; ?>"><?php echo $title; ?></a></li>
-					<?php
-					endwhile; 
-					echo '</ul>';
-					
-					if( $pager AND $_POST['navi_pos']!='top' ) {
-						echo '<div class="umrp-nav umrp-nav-bottom '.$_POST['navi_align'].'">'.$pager.'</div>';
-					}
-					
-				endif;
-				die();
-				break;
-				
-		endswitch;
+			echo '<ul>';
+			while($r->have_posts()): $r->the_post();
+			
+			$title = get_the_title() ? get_the_title() : get_the_ID();
+			$title = apply_filters('the_title', $title);
+			$title_attr = esc_attr($title);
+			
+			$word_limit = isset($opts['length']) ? intval($opts['length']) : 0;
+			if( $word_limit>0 ){
+				$words = explode(' ',$title);
+				if(count($words) > $word_limit) {
+					array_splice($words, $word_limit);
+    				$title = implode(' ', $words) . '&hellip;';
+    			}
+			}
+			?>
+			<li><a href="<?php the_permalink() ?>" title="<?php echo $title_attr; ?>"><?php echo $title; ?></a></li>
+			<?php
+			endwhile; 
+			echo '</ul>';
+			
+			if( $pager AND $opts['navi_pos']!='top' ) {
+				echo '<div class="umrp-nav umrp-nav-bottom '.$opts['navi_align'].'">'.$pager.'</div>';
+			}
+		endif;
 	}
 	
 	function pager($args) {
@@ -171,6 +166,34 @@ class UMoreRecentPostsWidget extends WP_Widget {
 		$this->plugin_url = plugin_dir_url(__FILE__);
 		$opts = array( 'classname' => 'widget_umrp' ); 
 		$this->WP_Widget( 'umrp', __('More Recent Posts', 'umrp'), $opts );
+	}
+	
+	function widget($args, $instance) {
+		extract($args);
+		$title = apply_filters('widget_title', $instance['title']);
+		echo $before_widget;
+		if( $title ) echo $before_title . $title . $after_title;
+		?>
+		<div class="umrp-container">
+			<div class="umrp-loader">Loading</div>
+			<div class="umrp-content">
+				<?php
+				global $umrp;
+				$umrp->the_list( $widget_id );
+				$opts = $umrp->get_widget_option($widget_id);
+				?>
+			</div>
+		</div>
+		<?php echo $after_widget; ?>
+		<script>
+		jQuery('#<?php echo $widget_id; ?>').UMoreRecentPostsWidget({
+			loader_label: '<?php echo $opts['loader_label']; ?>',
+			loader_symbol: '<?php echo $opts['loader_symbol']; ?>',
+			loader_direction: '<?php echo $opts['loader_direction']; ?>',
+			effect: '<?php echo $opts['effect']; ?>'
+		});
+		</script>
+        <?php
 	}
 	
 	function update($new_instance, $old_instance) { 
@@ -328,23 +351,8 @@ class UMoreRecentPostsWidget extends WP_Widget {
 		</div>
 		<?php 
 	}
-	
-	
-	function widget($args, $instance) {
-		extract($args);
-		$title = apply_filters('widget_title', $instance['title']);
-		echo $before_widget;
-		if( $title ) echo $before_title . $title . $after_title;
-		?>
-		<div class="umrp-container">
-			<div class="umrp-loader">Loading</div>
-			<div class="umrp-content"></div>
-		</div>
-		<?php
-        echo $after_widget; 
-	}
 }
 
 
-new UMoreRecentPosts();
+$umrp = new UMoreRecentPosts();
 

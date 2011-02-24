@@ -1,67 +1,42 @@
 ;(function($) {	
 
-$.fn.UMoreRecentPostsWidget = function(){ 
-	var matches = this.attr('id').match(/^umrp-(\d*)$/);
-	if( ! matches ) return;
-	
-	var widget_id = matches[1];
-	var $local = this;
+$.fn.UMoreRecentPostsWidget = function(options){ 
+	var widget_id = this.attr('id');
 	var $container = this.find('.umrp-container');
 	var $content = this.find('.umrp-content');
 	var $status = this.find('.umrp-loader');
-	var options = {};
 	
-	function get_option(){
-		var data = { 
-			action: 'umrp-ajax', 
-			_ajax_nonce: umrp_settings.nonce,
-			scope: 'get_option',
-			widget_id: widget_id
-		}
-		$.post(umrp_settings.ajax_url, data, init, 'json');
+	function init(){
+		if( options.loader_label ) $status.text(options.loader_label);
+		var status_opts = {};
+		if( options.loader_symbol ) status_opts.char = options.loader_symbol;
+		if( options.loader_direction=='left' ) status_opts.char_direction = options.loader_direction;
+		$status.ajax_status( status_opts );
+		$container.css({height: $container.height()});
+		$content.find('.umrp-nav a').live('click', function(){
+			get_list( $(this).text() );
+			return false;
+		});
 	}
 	
 	function get_list( paged ) {
 		$content.empty();
 		$status.play();
-		
 		var data = { 
 			action: 'umrp-ajax', 
 			_ajax_nonce: umrp_settings.nonce,
-			scope: 'get_list',
+			widget_id: widget_id,
 			paged: paged ? paged : ''
 		}
-		data = $.extend(options, data);
-		
 		$.post(umrp_settings.ajax_url, data, display);
-	}
-	
-	function init(r){
-		if(typeof r != 'object') return;
-		options = r;
-		
-		if( r.loader_label ) $status.text(r.loader_label);
-		var status_opts = {};
-		if( r.loader_symbol ) status_opts.char = r.loader_symbol;
-		if( r.loader_direction=='left' ) status_opts.char_direction = r.loader_direction;
-		$status.ajax_status( status_opts );
-		
-		get_list();
 	}
 	
 	function display(r){
 		$status.stop();
-		$content
-		.html(r)
-		.find('.umrp-nav a').click( function(){
-			get_list( $(this).text() );
-			return false;
-		});
-		
+		$content.html(r);
 		$container
 		.css({height: 'auto'})
 		.css({height: $container.height()});
-		
 		switch(options.effect){
 			case 'fadein':
 			$content.find('li').hide().fadeIn('fast');
@@ -72,7 +47,8 @@ $.fn.UMoreRecentPostsWidget = function(){
 		}
 	}
 	
-	get_option();
+	init();
+	return this;
 }
 
 $.fn.ajax_status = function(opts){
@@ -109,12 +85,6 @@ $.fn.ajax_status = function(opts){
 	this.hide();
 	return this;
 }
-
-$(function(){
-	$('.widget_umrp').each(function(){ 
-		$(this).UMoreRecentPostsWidget();
-	});
-});
 
 })(jQuery);
 
