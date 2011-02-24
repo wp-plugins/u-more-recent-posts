@@ -3,7 +3,7 @@
 Plugin Name: U More Recent Posts
 Plugin URI: http://urlless.com/wordpress-plugin-u-more-recent-posts/
 Description: Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
-Version: 1.1.1
+Version: 1.1.2
 Author: Taehan Lee
 Author URI: http://urlless.com
 */ 
@@ -41,7 +41,19 @@ class UMoreRecentPosts {
 	
 	function ajax() {
 		check_ajax_referer( 'umrp_nonce' );
-		$this->the_list( $_POST['widget_id'], $_POST['paged'] );
+		
+		switch( $_POST['scope'] ):
+			
+			case 'get_option':
+			$opts = $this->get_widget_option( $_POST['widget_id'] );
+			echo json_encode( $opts );
+			break;
+			
+			case 'get_list':
+			$this->the_list( $_POST['widget_id'], $_POST['paged'] );
+			break;
+			
+		endswitch;	
 		die();
 	}
 	
@@ -177,23 +189,11 @@ class UMoreRecentPostsWidget extends WP_Widget {
 		<div class="umrp-container">
 			<div class="umrp-loader">Loading</div>
 			<div class="umrp-content">
-				<?php
-				global $umrp;
-				$umrp->the_list( $widget_id );
-				$opts = $umrp->get_widget_option($widget_id);
-				?>
+				<?php global $umrp; $umrp->the_list( $widget_id );?>
 			</div>
 		</div>
-		<?php echo $after_widget; ?>
-		<script>
-		jQuery('#<?php echo $widget_id; ?>').UMoreRecentPostsWidget({
-			loader_label: '<?php echo $opts['loader_label']; ?>',
-			loader_symbol: '<?php echo $opts['loader_symbol']; ?>',
-			loader_direction: '<?php echo $opts['loader_direction']; ?>',
-			effect: '<?php echo $opts['effect']; ?>'
-		});
-		</script>
-        <?php
+		<?php 
+		echo $after_widget;
 	}
 	
 	function update($new_instance, $old_instance) { 

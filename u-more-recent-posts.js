@@ -1,60 +1,71 @@
 ;(function($) {	
 
-$.fn.UMoreRecentPostsWidget = function(options){ 
+$.fn.UMoreRecentPostsWidget = function(){ 
 	var widget_id = this.attr('id');
 	var $container = this.find('.umrp-container');
 	var $content = this.find('.umrp-content');
+	var $nav = this.find('.umrp-nav');
 	var $status = this.find('.umrp-loader');
+	var options = {};
 	
 	function init(){
-		if( options.loader_label ) $status.text(options.loader_label);
-		var status_opts = {};
-		if( options.loader_symbol ) status_opts.char = options.loader_symbol;
-		if( options.loader_direction=='left' ) status_opts.char_direction = options.loader_direction;
-		$status.ajax_status( status_opts );
 		$container.css({height: $container.height()});
-		$content.find('.umrp-nav a').live('click', function(){
+		$nav.find('a').live('click', function(){
 			get_list( $(this).text() );
 			return false;
 		});
+		
+		var data = { 
+			action: 'umrp-ajax', 
+			_ajax_nonce: umrp_settings.nonce,
+			scope: 'get_option',
+			widget_id: widget_id
+		}
+		$.post(umrp_settings.ajax_url, data, function(r){
+			if(typeof r != 'object') return;
+			options = r;
+			if( options.loader_label ) $status.text(options.loader_label);
+			var status_opts = {};
+			if( options.loader_symbol ) status_opts.char = options.loader_symbol;
+			if( options.loader_direction=='left' ) status_opts.char_direction = options.loader_direction;
+			$status.umrp_ajax_status( status_opts );
+		}, 'json');
 	}
 	
 	function get_list( paged ) {
 		$content.empty();
-		$status.play();
+		if( $status.enabled ) $status.play();
 		var data = { 
 			action: 'umrp-ajax', 
 			_ajax_nonce: umrp_settings.nonce,
+			scope: 'get_list',
 			widget_id: widget_id,
 			paged: paged ? paged : ''
 		}
-		$.post(umrp_settings.ajax_url, data, display);
-	}
-	
-	function display(r){
-		$status.stop();
-		$content.html(r);
-		$container
-		.css({height: 'auto'})
-		.css({height: $container.height()});
-		switch(options.effect){
-			case 'fadein':
-			$content.find('li').hide().fadeIn('fast');
-			break;
-			case 'slidedown':
-			$content.find('li').hide().slideDown('fast');
-			break;
-		}
+		$.post(umrp_settings.ajax_url, data, function(r){
+			if( $status.enabled ) $status.stop();
+			$content.html(r);
+			$container
+			.css({height: 'auto'})
+			.css({height: $container.height()});
+			switch(options.effect){
+				case 'fadein':
+				$content.find('li').hide().fadeIn('fast');
+				break;
+				case 'slidedown':
+				$content.find('li').hide().slideDown('fast');
+				break;
+			}
+		});
 	}
 	
 	init();
 	return this;
 }
 
-$.fn.ajax_status = function(opts){
+$.fn.umrp_ajax_status = function(opts){
 	var defaults = {interval:150, char:'.', char_len:3, char_direction:'right'};
 	var opts = $.extend(defaults, opts);
-	
 	var $local = this;
 	var default_str;
 	var max_len;
@@ -83,8 +94,15 @@ $.fn.ajax_status = function(opts){
 	
 	this.reset_text(this.text());
 	this.hide();
+	this.enabled = true;
 	return this;
 }
+
+$(function(){
+	$('.widget_umrp').each(function(){ 
+		$(this).UMoreRecentPostsWidget();
+	});
+});
 
 })(jQuery);
 
