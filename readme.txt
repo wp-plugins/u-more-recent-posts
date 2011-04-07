@@ -1,10 +1,10 @@
 === U More Recent Posts ===
 Contributors: taehan
 Donate link: 
-Tags: widget, sidebar, post, recent posts, posts list, pager, paginate, navigate, navigation, ajax
+Tags: widget, sidebar, post, recent posts, posts list, pager, paginate, navigate, navigation, ajax, custom post type
 Requires at least: 2.8.0
-Tested up to: 3.0.4
-Stable tag: 1.1.2
+Tested up to: 3.1.1
+Stable tag: 1.2
 
 Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
 
@@ -15,7 +15,9 @@ Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make
 = Features =
 * Navigate more recent posts without refreshing screen (AJAX-based).
 * Customize Recent Posts List, Ajax Loader and Navigation.
-* Include/exclude category posts.
+* Custom post type choosable. (3.1 or higher)
+* Include/exclude terms of taxonomy posts. (3.1 or higher)
+* Include/exclude category posts. (2.8 ~ 3.0.x)
 
 == Installation ==
 
@@ -31,6 +33,11 @@ Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make
 2. Widget config interface.
 
 == Changelog ==
+
+= 1.2 =
+* Custom post type choosable. (3.1 or higher)
+* Include/exclude terms of taxonomy posts. (3.1 or higher)
+* filter hook for query
 
 = 1.1.2 =
 * Potential bugs are fixed.

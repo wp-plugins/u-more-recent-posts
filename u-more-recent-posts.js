@@ -1,20 +1,21 @@
-;(function($) {	
 
-$.fn.UMoreRecentPostsWidget = function(){ 
-	var widget_id = this.attr('id');
-	var $container = this.find('.umrp-container');
-	var $content = this.find('.umrp-content');
-	var $nav = this.find('.umrp-nav');
-	var $status = this.find('.umrp-loader');
+var UMoreRecentPostsWidget = function(t){
+	var $ = jQuery;
+	var t = $(t);
+	var widget_id = t.attr('id');
+	var container = t.find('.umrp-container');
+	var content = t.find('.umrp-content');
+	var nav = t.find('.umrp-nav');
+	var loader = t.find('.umrp-loader').hide();
 	var options = {};
 	
-	function init(){
-		$container.css({height: $container.height()});
-		$nav.find('a').live('click', function(){
+	var init = function(){
+		container.css({height: container.height()});
+		
+		nav.find('a').live('click', function(){
 			get_list( $(this).text() );
 			return false;
 		});
-		
 		var data = { 
 			action: 'umrp-ajax', 
 			_ajax_nonce: umrp_settings.nonce,
@@ -24,17 +25,20 @@ $.fn.UMoreRecentPostsWidget = function(){
 		$.post(umrp_settings.ajax_url, data, function(r){
 			if(typeof r != 'object') return;
 			options = r;
-			if( options.loader_label ) $status.text(options.loader_label);
-			var status_opts = {};
-			if( options.loader_symbol ) status_opts.char = options.loader_symbol;
-			if( options.loader_direction=='left' ) status_opts.char_direction = options.loader_direction;
-			$status.umrp_ajax_status( status_opts );
+			if( options.loader_label ) 
+				loader.text(options.loader_label);
+			var loader_opts = {};
+			if( options.loader_symbol ) 
+				loader_opts.char = options.loader_symbol;
+			if( options.loader_direction=='left' ) 
+				loader_opts.char_direction = options.loader_direction;
+			ajax_loader.init( loader_opts );
 		}, 'json');
 	}
 	
-	function get_list( paged ) {
-		$content.empty();
-		if( $status.enabled ) $status.play();
+	var get_list = function( paged ) {
+		content.empty();
+		if( ajax_loader.enabled ) ajax_loader.play();
 		var data = { 
 			action: 'umrp-ajax', 
 			_ajax_nonce: umrp_settings.nonce,
@@ -43,68 +47,89 @@ $.fn.UMoreRecentPostsWidget = function(){
 			paged: paged ? paged : ''
 		}
 		$.post(umrp_settings.ajax_url, data, function(r){
-			if( $status.enabled ) $status.stop();
-			$content.html(r);
-			$container
+			if( ajax_loader.enabled ) ajax_loader.stop();
+			content.html(r);
+			container
 			.css({height: 'auto'})
-			.css({height: $container.height()});
+			.css({height: container.height()});
 			switch(options.effect){
 				case 'fadein':
-				$content.find('li').hide().fadeIn('fast');
+				content.find('li').hide().fadeIn('fast');
 				break;
 				case 'slidedown':
-				$content.find('li').hide().slideDown('fast');
+				content.find('li').hide().slideDown('fast');
 				break;
 			}
 		});
 	}
 	
-	init();
-	return this;
-}
-
-$.fn.umrp_ajax_status = function(opts){
-	var defaults = {interval:150, char:'.', char_len:3, char_direction:'right'};
-	var opts = $.extend(defaults, opts);
-	var $local = this;
-	var default_str;
-	var max_len;
-	var id;
-	
-	this.play = function(){
-		if( opts.char_len>0 && opts.char.length>0 ){
-			id = window.setInterval(function(){
-				var str = $local.text();
-				var txt = str.length < max_len ? opts.char_direction=='left' ? opts.char+str : str+opts.char : default_str;
-				$local.text( txt );
-			}, opts.interval);
+	var ajax_loader = {
+		defaults: {
+			interval: 150, 
+			char: '.', 
+			char_len: 3, 
+			char_direction: 'right'
+		},
+		opts: {},
+		default_str: '',
+		max_len: 0,
+		interval_id: null,
+		enabled: false,
+		
+		init: function(opts){
+			this.opts = $.extend(this.defaults, opts);
+			this.default_str = loader.text();
+			this.max_len = this.default_str.length + this.opts.char.length*this.opts.char_len;
+			this.enabled = true;
+		},
+		
+		play: function(){
+			this.stop();
+			if( this.opts.char_len>0 && this.opts.char.length>0 ){
+				this.interval_id = window.setInterval(function(){
+					var str = loader.text();
+					loader.text( str.length < ajax_loader.max_len ? ajax_loader.opts.char_direction=='left' ? ajax_loader.opts.char+str : str+ajax_loader.opts.char : ajax_loader.default_str );
+				}, this.opts.interval);
+			}
+			loader.show();
+		},
+		
+		stop: function(){
+			if(this.interval_id) 
+				window.clearInterval(this.interval_id);
+			loader.text(this.default_str).hide();
 		}
-		return $local.show();
 	}
 	
-	this.stop = function(){
-		if(id) window.clearInterval(id);
-		return $local.text(default_str).hide();
-	}
-	
-	this.reset_text = function(str){
-		default_str = str;
-		max_len = default_str.length + opts.char.length*opts.char_len;
-	}
-	
-	this.reset_text(this.text());
-	this.hide();
-	this.enabled = true;
-	return this;
+	init();
 }
 
-$(function(){
-	$('.widget_umrp').each(function(){ 
-		$(this).UMoreRecentPostsWidget();
+
+	
+	
+
+jQuery(function(){
+	jQuery('.widget_umrp').each(function(){ 
+		new UMoreRecentPostsWidget( this );
 	});
 });
 
-})(jQuery);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
