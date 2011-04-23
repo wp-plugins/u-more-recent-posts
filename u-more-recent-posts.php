@@ -3,7 +3,7 @@
 Plugin Name: U More Recent Posts
 Plugin URI: http://urlless.com/wordpress-plugin-u-more-recent-posts/
 Description: Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
-Version: 1.2
+Version: 1.3
 Author: Taehan Lee
 Author URI: http://urlless.com
 */ 
@@ -17,7 +17,8 @@ class UMoreRecentPosts {
 	
 	function UMoreRecentPosts(){
 		$this->plugin_url = plugin_dir_url(__FILE__);
-		//load_plugin_textdomain('umrp', false, dirname(plugin_basename(__FILE__)).'/lang/');
+		load_plugin_textdomain('umrp', false, dirname(plugin_basename(__FILE__)).'/lang/');
+		
 		add_action( 'init', array(&$this, 'init') ); 
 		add_action( 'widgets_init', array(&$this, 'widgets_init') ); 
 		add_action( 'wp_ajax_umrp-ajax', array(&$this, 'ajax') );
@@ -47,6 +48,7 @@ class UMoreRecentPosts {
 			
 			case 'get_option':
 			$opts = $this->get_widget_option( $_POST['widget_id'] );
+			$opts['cookiepath'] = COOKIEPATH;
 			echo json_encode( $opts );
 			break;
 			
@@ -67,10 +69,12 @@ class UMoreRecentPosts {
 	function the_list( $widget_id, $paged='' ){
 		$opts = $this->get_widget_option($widget_id);
 		
+		$paged = ( empty($paged) AND is_single() AND !empty($_COOKIE['wp-'.$widget_id.'-paged']) ) ? $_COOKIE['wp-'.$widget_id.'-paged'] : $paged;
+		
 		$args = array(
 			'post_type' => $post_type,
 			'posts_per_page' => !empty($opts['number']) ? $opts['number'] : 5,
-			'paged' => !empty($paged) ? $paged : '', 
+			'paged' => intval($paged), 
 			'nopaging' => 0, 
 			'post_status' => 'publish', 
 			'caller_get_posts' => 1
@@ -92,9 +96,15 @@ class UMoreRecentPosts {
 				$args['tax_query'] = array($new_tax_query);
 			}
 		}
-		
+			
 		$args = apply_filters('umrp_query_parameters', $args);
-		//echo '<pre>'; print_r($args); echo '</pre>';
+		
+		if( is_single() ){
+			global $post;
+			$current_single_post_id = $post->ID;
+		}else{
+			$current_single_post_id = '';
+		}
 		
 		$r = new WP_Query($args);
 		if($r->have_posts()): 
@@ -126,8 +136,10 @@ class UMoreRecentPosts {
     				$title = implode(' ', $words) . '&hellip;';
     			}
 			}
+			
+			$li_class = $current_single_post_id==get_the_ID() ? 'current_post' : '';
 			?>
-			<li><a href="<?php the_permalink() ?>" title="<?php echo $title_attr; ?>"><?php echo $title; ?></a></li>
+			<li class="<?php echo $li_class?>"><a href="<?php the_permalink() ?>" title="<?php echo $title_attr; ?>"><?php echo $title; ?></a></li>
 			<?php
 			endwhile; 
 			echo '</ul>';
@@ -358,7 +370,7 @@ class UMoreRecentPostsWidget extends WP_Widget {
 					<option value="<?php echo $i; ?>" <?php echo ($i == $page_range) ? "selected='selected'" : ""; ?>><?php echo $i; ?></option>
 					<?php endfor; ?>
 				</select>
-				<br><small><?php _e('The number of page links to show before and after the current page.<br>Recommended value: 1', 'umrp'); ?></small>
+				<br><small><?php _e('The number of page links to show before and after the current page.', 'umrp'); ?></small>
 			</p>
 			<p>
 				<label><?php _e('Position', 'umrp'); ?>: </label>

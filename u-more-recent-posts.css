@@ -2,6 +2,9 @@
 	margin-top: 0 !important;
 	margin-bottom: 0 !important;
 }
+.umrp-content li.current_post a {
+	font-weight: bold;
+}
 .umrp-loader {
 	display: none;
 }

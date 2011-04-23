@@ -4,7 +4,7 @@ Donate link:
 Tags: widget, sidebar, post, recent posts, posts list, pager, paginate, navigate, navigation, ajax, custom post type
 Requires at least: 2.8.0
 Tested up to: 3.1.1
-Stable tag: 1.2
+Stable tag: 1.3
 
 Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
 
@@ -33,6 +33,10 @@ Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make
 2. Widget config interface.
 
 == Changelog ==
+
+= 1.3 =
+* Remember previous paged using cookie on single post.
+* Highlight current post list on single post.
 
 = 1.2 =
 * Custom post type choosable. (3.1 or higher)

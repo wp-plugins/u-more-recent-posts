@@ -5,6 +5,7 @@ var UMoreRecentPostsWidget = function(t){
 	var widget_id = t.attr('id');
 	var container = t.find('.umrp-container');
 	var content = t.find('.umrp-content');
+	var list = t.find('.umrp-content ul:eq(0)');
 	var nav = t.find('.umrp-nav');
 	var loader = t.find('.umrp-loader').hide();
 	var options = {};
@@ -12,10 +13,16 @@ var UMoreRecentPostsWidget = function(t){
 	var init = function(){
 		container.css({height: container.height()});
 		
+		if( ! $('body').hasClass('single') )
+			set_cookie('wp-'+widget_id+'-paged', null);
+			
 		nav.find('a').live('click', function(){
-			get_list( $(this).text() );
+			var paged = Number($(this).text());
+			get_list( paged );
+			set_cookie('wp-'+widget_id+'-paged', paged, {path:options.cookiepath ? options.cookiepath : '/'});
 			return false;
 		});
+			
 		var data = { 
 			action: 'umrp-ajax', 
 			_ajax_nonce: umrp_settings.nonce,
@@ -59,7 +66,7 @@ var UMoreRecentPostsWidget = function(t){
 				case 'slidedown':
 				content.find('li').hide().slideDown('fast');
 				break;
-			}
+			};
 		});
 	}
 	
@@ -99,6 +106,30 @@ var UMoreRecentPostsWidget = function(t){
 				window.clearInterval(this.interval_id);
 			loader.text(this.default_str).hide();
 		}
+	}
+	
+	var set_cookie = function(name, value, options) {
+		// Copyright (c) 2006 Klaus Hartl (stilbuero.de)
+		options = options || {};
+		if (value === null) {
+			value = '';
+			options.expires = -1;
+		}
+		var expires = '';
+		if (options.expires && (typeof options.expires == 'number' || options.expires.toUTCString)) {
+			var date;
+			if (typeof options.expires == 'number') {
+				date = new Date();
+				date.setTime(date.getTime() + (options.expires * 24 * 60 * 60 * 1000));
+			} else {
+				date = options.expires;
+			}
+			expires = '; expires=' + date.toUTCString(); 
+		}
+		var path = options.path ? '; path=' + (options.path) : '';
+		var domain = options.domain ? '; domain=' + (options.domain) : '';
+		var secure = options.secure ? '; secure' : '';
+		document.cookie = [name, '=', encodeURIComponent(value), expires, path, domain, secure].join('');
 	}
 	
 	init();
