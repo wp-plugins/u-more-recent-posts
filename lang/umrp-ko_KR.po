@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: umrp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-04-24 03:56+0900\n"
-"PO-Revision-Date: 2011-04-24 03:56+0900\n"
+"POT-Creation-Date: 2011-04-24 10:23+0900\n"
+"PO-Revision-Date: 2011-04-24 10:24+0900\n"
 "Last-Translator: taehan lee <urlless@gmail.com>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -13,119 +13,123 @@ msgstr ""
 "X-Poedit-Basepath: .\n"
 "X-Poedit-SearchPath-0: ..\n"
 
-#: ../u-more-recent-posts.php:205
+#: ../u-more-recent-posts.php:206
 msgid "More Recent Posts"
 msgstr "더 많은 최근 포스트"
 
-#: ../u-more-recent-posts.php:215
-#: ../u-more-recent-posts.php:255
+#: ../u-more-recent-posts.php:224
+#: ../u-more-recent-posts.php:266
 msgid "Loading"
 msgstr "읽어오는 중"
 
-#: ../u-more-recent-posts.php:247
+#: ../u-more-recent-posts.php:257
 msgid "Recent Posts"
 msgstr "최근 포스트"
 
-#: ../u-more-recent-posts.php:259
+#: ../u-more-recent-posts.php:270
 msgid "Pages:"
 msgstr "페이지:"
 
-#: ../u-more-recent-posts.php:281
+#: ../u-more-recent-posts.php:293
 msgid "Title"
 msgstr "제목"
 
-#: ../u-more-recent-posts.php:286
+#: ../u-more-recent-posts.php:298
 msgid "Number of posts to show"
 msgstr "포스트 목록 개수"
 
-#: ../u-more-recent-posts.php:291
+#: ../u-more-recent-posts.php:303
 msgid "Post title length"
 msgstr "포스트 제목 길이"
 
-#: ../u-more-recent-posts.php:293
+#: ../u-more-recent-posts.php:305
 msgid "words"
 msgstr "단어"
 
-#: ../u-more-recent-posts.php:297
+#: ../u-more-recent-posts.php:310
+msgid "Show Comment Count"
+msgstr "코멘트 개수 표시"
+
+#: ../u-more-recent-posts.php:314
 msgid "Show Effect"
 msgstr "보여주기 효과"
 
-#: ../u-more-recent-posts.php:313
+#: ../u-more-recent-posts.php:330
 msgid "Exclude category IDs"
 msgstr "제외할 카테고리 아이디"
 
-#: ../u-more-recent-posts.php:315
-#: ../u-more-recent-posts.php:320
-#: ../u-more-recent-posts.php:438
+#: ../u-more-recent-posts.php:332
+#: ../u-more-recent-posts.php:337
+#: ../u-more-recent-posts.php:455
 msgid "Separated by commas"
 msgstr "여러 개인 경우 쉼표로 구분하세요"
 
-#: ../u-more-recent-posts.php:318
+#: ../u-more-recent-posts.php:335
 msgid "Include category IDs"
 msgstr "포함할 카테고리 아이디"
 
-#: ../u-more-recent-posts.php:326
+#: ../u-more-recent-posts.php:343
 msgid "Post Type"
 msgstr "포스트 타입"
 
-#: ../u-more-recent-posts.php:335
+#: ../u-more-recent-posts.php:352
 msgid "Ajax Loader"
 msgstr "Ajax 로더"
 
-#: ../u-more-recent-posts.php:337
-#: ../u-more-recent-posts.php:356
+#: ../u-more-recent-posts.php:354
+#: ../u-more-recent-posts.php:373
 msgid "Label"
 msgstr "라벨"
 
-#: ../u-more-recent-posts.php:342
+#: ../u-more-recent-posts.php:359
 msgid "Progress symbol"
 msgstr "진행 표시 심볼"
 
-#: ../u-more-recent-posts.php:347
+#: ../u-more-recent-posts.php:364
 msgid "Progress direction"
 msgstr "진행 방향"
 
-#: ../u-more-recent-posts.php:348
+#: ../u-more-recent-posts.php:365
 msgid "Right"
 msgstr "오른쪽"
 
-#: ../u-more-recent-posts.php:349
+#: ../u-more-recent-posts.php:366
 msgid "Left"
 msgstr "왼쪽"
 
-#: ../u-more-recent-posts.php:354
+#: ../u-more-recent-posts.php:371
 msgid "Navigation"
 msgstr "페이지 네비게이션"
 
-#: ../u-more-recent-posts.php:360
+#: ../u-more-recent-posts.php:377
 msgid "Page range"
 msgstr "페이지 링크 개수"
 
-#: ../u-more-recent-posts.php:366
+#: ../u-more-recent-posts.php:383
 msgid "The number of page links to show before and after the current page."
 msgstr "현재 페이지 링크의 좌우에 보여줄 페이지 링크 개수."
 
-#: ../u-more-recent-posts.php:369
+#: ../u-more-recent-posts.php:386
 msgid "Position"
 msgstr "위치"
 
-#: ../u-more-recent-posts.php:382
+#: ../u-more-recent-posts.php:399
 msgid "Text align"
 msgstr "텍스트 정렬"
 
-#: ../u-more-recent-posts.php:427
+#: ../u-more-recent-posts.php:444
 msgid "Exclude"
 msgstr "제외"
 
-#: ../u-more-recent-posts.php:428
+#: ../u-more-recent-posts.php:445
 msgid "or"
 msgstr "또는"
 
-#: ../u-more-recent-posts.php:429
+#: ../u-more-recent-posts.php:446
 msgid "Include"
 msgstr "포함"
 
-#: ../u-more-recent-posts.php:436
+#: ../u-more-recent-posts.php:453
 msgid "IDs"
 msgstr "아이디"
 
