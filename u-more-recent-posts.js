@@ -9,13 +9,19 @@ var UMoreRecentPostsWidget = function(t){
 	var nav = t.find('.umrp-nav');
 	var loader = t.find('.umrp-loader').hide();
 	var options = {};
+	var current_postid = '';
 	
 	var init = function(){
 		container.css({height: container.height()});
 		
-		if( ! $('body').hasClass('single') )
+		if( container.hasClass('single') ){
+			var current_postid_tmp = /postid-(\d+)/.exec( container.attr('class') );
+			if( current_postid_tmp ) 
+				current_postid = current_postid_tmp[1];
+		}else{
 			set_cookie('wp-'+widget_id+'-paged', null);
-			
+		}
+		
 		nav.find('a').live('click', function(){
 			var paged = Number($(this).text());
 			get_list( paged );
@@ -51,7 +57,8 @@ var UMoreRecentPostsWidget = function(t){
 			_ajax_nonce: umrp_settings.nonce,
 			scope: 'get_list',
 			widget_id: widget_id,
-			paged: paged ? paged : ''
+			paged: paged ? paged : '',
+			current_postid: current_postid
 		}
 		$.post(umrp_settings.ajax_url, data, function(r){
 			if( ajax_loader.enabled ) ajax_loader.stop();

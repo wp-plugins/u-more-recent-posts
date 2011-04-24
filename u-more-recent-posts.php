@@ -3,7 +3,7 @@
 Plugin Name: U More Recent Posts
 Plugin URI: http://urlless.com/wordpress-plugin-u-more-recent-posts/
 Description: Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
-Version: 1.3
+Version: 1.3.1
 Author: Taehan Lee
 Author URI: http://urlless.com
 */ 
@@ -53,7 +53,7 @@ class UMoreRecentPosts {
 			break;
 			
 			case 'get_list':
-			$this->the_list( $_POST['widget_id'], $_POST['paged'] );
+			$this->the_list( $_POST['widget_id'], $_POST['paged'], $_POST['current_postid'] );
 			break;
 			
 		endswitch;	
@@ -66,7 +66,7 @@ class UMoreRecentPosts {
 		return $opts[intval($widget_id)];
 	}
 	
-	function the_list( $widget_id, $paged='' ){
+	function the_list( $widget_id, $paged='', $current_postid='' ){
 		$opts = $this->get_widget_option($widget_id);
 		
 		$paged = ( empty($paged) AND is_single() AND !empty($_COOKIE['wp-'.$widget_id.'-paged']) ) ? $_COOKIE['wp-'.$widget_id.'-paged'] : $paged;
@@ -99,13 +99,6 @@ class UMoreRecentPosts {
 			
 		$args = apply_filters('umrp_query_parameters', $args);
 		
-		if( is_single() ){
-			global $post;
-			$current_single_post_id = $post->ID;
-		}else{
-			$current_single_post_id = '';
-		}
-		
 		$r = new WP_Query($args);
 		if($r->have_posts()): 
 			$pager = $this->pager( array(
@@ -136,8 +129,9 @@ class UMoreRecentPosts {
     				$title = implode(' ', $words) . '&hellip;';
     			}
 			}
+			$title .= (!empty($opts['show_comment_count']) AND $r->post->comment_count>0) ? ' ('.$r->post->comment_count.')' : '';
 			
-			$li_class = $current_single_post_id==get_the_ID() ? 'current_post' : '';
+			$li_class = $current_postid==get_the_ID() ? 'current_post' : '';
 			?>
 			<li class="<?php echo $li_class?>"><a href="<?php the_permalink() ?>" title="<?php echo $title_attr; ?>"><?php echo $title; ?></a></li>
 			<?php
@@ -217,11 +211,19 @@ class UMoreRecentPostsWidget extends WP_Widget {
 		$title = apply_filters('widget_title', $instance['title']);
 		echo $before_widget;
 		if( $title ) echo $before_title . $title . $after_title;
+		
+		global $umrp, $post;
+		$class = '';
+		$current_postid = '';
+		if( is_single() ){
+			$class = 'single postid-'.$post->ID;
+			$current_postid = $post->ID;
+		}
 		?>
-		<div class="umrp-container">
+		<div class="umrp-container <?php echo $class?>">
 			<div class="umrp-loader"><?php _e('Loading', 'umrp')?></div>
 			<div class="umrp-content">
-				<?php global $umrp; $umrp->the_list( $widget_id );?>
+				<?php $umrp->the_list( $widget_id, '', $current_postid );?>
 			</div>
 		</div>
 		<?php 
@@ -237,6 +239,7 @@ class UMoreRecentPostsWidget extends WP_Widget {
 		$instance['exclude'] = $new_instance['exclude'];
 		$instance['include'] = $new_instance['include'];
 		$instance['length'] = intval($new_instance['length']) ? $new_instance['length'] : '';
+		$instance['show_comment_count'] = $new_instance['show_comment_count'];
 		$instance['effect'] = $new_instance['effect'];
 		$instance['loader_label'] = strip_tags(trim($new_instance['loader_label']));
 		$instance['loader_symbol'] = strip_tags(trim($new_instance['loader_symbol']));
@@ -258,6 +261,7 @@ class UMoreRecentPostsWidget extends WP_Widget {
 			'exclude'		=> '', 
 			'include'		=> '', 
 			'length'		=> '', 
+			'show_comment_count' => '',
 			'effect'		=> '',
 			'loader_label'	=> __('Loading', 'umrp'),
 			'loader_symbol'	=> '.',
@@ -275,6 +279,7 @@ class UMoreRecentPostsWidget extends WP_Widget {
 		$exclude = esc_attr( $instance['exclude'] ); 
 		$include = esc_attr( $instance['include'] ); 
 		$length = esc_attr( $instance['length'] ); 
+		$show_comment_count = $instance['show_comment_count'];
 		$effect = esc_attr( $instance['effect'] ); 
 		$loader_label = esc_attr( $instance['loader_label'] );
 		$loader_symbol = esc_attr( $instance['loader_symbol'] );
@@ -298,6 +303,11 @@ class UMoreRecentPostsWidget extends WP_Widget {
 			<label><?php _e('Post title length', 'umrp'); ?>: </label>
 			<input name="<?php echo $this->get_field_name('length'); ?>" value="<?php echo $length; ?>" type="text" size="3" /> 
 			<?php _e('words', 'umrp'); ?>
+		</p>
+		
+		<p>
+			<label><input type="checkbox" name="<?php echo $this->get_field_name('show_comment_count'); ?>" value="1" <?php echo !empty($show_comment_count) ? 'checked="checked"' : '';?>> 
+			<?php _e('Show Comment Count', 'umrp'); ?>: </label>
 		</p>
 		
 		<p>
