@@ -1,7 +1,7 @@
 <?php
 /* 
 Plugin Name: U More Recent Posts
-Plugin URI: http://urlless.com/wordpress-plugin-u-more-recent-posts/
+Plugin URI: http://urlless.com/u-more-recent-posts/
 Description: Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
 Version: 1.3.1
 Author: Taehan Lee
