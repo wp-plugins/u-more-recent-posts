@@ -1,0 +1,300 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: umrp\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2011-08-23 11:54+0900\n"
+"PO-Revision-Date: 2011-08-23 11:55+0900\n"
+"Last-Translator: taehan lee <urlless@gmail.com>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: __;_e\n"
+"X-Poedit-Basepath: .\n"
+"X-Poedit-SearchPath-0: ..\n"
+
+#: ../u-more-recent-posts.php:299
+msgid "Recent Posts"
+msgstr "최근 포스트"
+
+#: ../u-more-recent-posts.php:321
+msgid "Pages:"
+msgstr "페이지:"
+
+#: ../u-more-recent-posts.php:348
+msgid "More Recent Posts"
+msgstr "더 많은 최근 포스트"
+
+#: ../u-more-recent-posts.php:429
+#: ../u-more-recent-posts.php:435
+#: ../u-more-recent-posts.php:447
+#: ../u-more-recent-posts.php:510
+#: ../u-more-recent-posts.php:684
+msgid "None"
+msgstr "없음"
+
+#: ../u-more-recent-posts.php:430
+msgid "Fade In"
+msgstr "서서히 나타남"
+
+#: ../u-more-recent-posts.php:431
+msgid "Slide Down"
+msgstr "아래로 펼쳐짐"
+
+#: ../u-more-recent-posts.php:432
+msgid "Slide In"
+msgstr "안으로 들어옴"
+
+#: ../u-more-recent-posts.php:436
+msgid "Fade Out"
+msgstr "서서히 사라짐"
+
+#: ../u-more-recent-posts.php:437
+msgid "Slide Up"
+msgstr "위로 접음"
+
+#: ../u-more-recent-posts.php:438
+msgid "Slide Out"
+msgstr "밖으로 나감"
+
+#: ../u-more-recent-posts.php:442
+msgid "Bottom"
+msgstr "아래"
+
+#: ../u-more-recent-posts.php:443
+msgid "Top"
+msgstr "위"
+
+#: ../u-more-recent-posts.php:444
+msgid "Both"
+msgstr "모두"
+
+#: ../u-more-recent-posts.php:448
+msgid "Left"
+msgstr "왼쪽"
+
+#: ../u-more-recent-posts.php:449
+msgid "Center"
+msgstr "가운데"
+
+#: ../u-more-recent-posts.php:450
+msgid "Right"
+msgstr "오른쪽"
+
+#: ../u-more-recent-posts.php:455
+#: ../u-more-recent-posts.php:626
+msgid "View Demos"
+msgstr "데모 보기"
+
+#: ../u-more-recent-posts.php:456
+#: ../u-more-recent-posts.php:627
+msgid "Demos, Shortcode usage, DOM Structure & Custom CSS"
+msgstr "데모, 숏코드 사용, DOM 구조와 사용자 정의 CSS"
+
+#: ../u-more-recent-posts.php:460
+msgid "General settings"
+msgstr "기본 설정"
+
+#: ../u-more-recent-posts.php:462
+msgid "Title"
+msgstr "제목"
+
+#: ../u-more-recent-posts.php:467
+msgid "Number of posts to show"
+msgstr "포스트 목록 개수"
+
+#: ../u-more-recent-posts.php:472
+msgid "Post title length"
+msgstr "포스트 제목 길이"
+
+#: ../u-more-recent-posts.php:474
+msgid "words"
+msgstr "단어"
+
+#: ../u-more-recent-posts.php:477
+msgid "List format"
+msgstr "리스트 형식"
+
+#: ../u-more-recent-posts.php:478
+msgid "Enable HTML, Line break"
+msgstr "HTML과 줄바꿈 사용 가능"
+
+#: ../u-more-recent-posts.php:480
+#: ../u-more-recent-posts.php:621
+msgid "Replace Keywords"
+msgstr "대체 키워드"
+
+#: ../u-more-recent-posts.php:485
+msgid "Date format"
+msgstr "날짜 형식"
+
+#: ../u-more-recent-posts.php:490
+msgid "Thumbnail size"
+msgstr "썸네일 크기"
+
+#: ../u-more-recent-posts.php:499
+msgid "Filtering"
+msgstr "필터링"
+
+#: ../u-more-recent-posts.php:501
+msgid "Post Type"
+msgstr "포스트 타입"
+
+#: ../u-more-recent-posts.php:501
+#: ../u-more-recent-posts.php:667
+msgid "Taxonomy"
+msgstr "분류(Taxonomy)"
+
+#: ../u-more-recent-posts.php:508
+msgid "Author"
+msgstr "글쓴이"
+
+#: ../u-more-recent-posts.php:512
+#: ../u-more-recent-posts.php:687
+msgid "Include"
+msgstr "포함"
+
+#: ../u-more-recent-posts.php:514
+#: ../u-more-recent-posts.php:690
+msgid "Exclude"
+msgstr "제외"
+
+#: ../u-more-recent-posts.php:516
+msgid "If you select Include or Exclude, input author IDs"
+msgstr "포함 또는 제외를 선택했다면, 글쓴이의 아이디를 입력"
+
+#: ../u-more-recent-posts.php:518
+#: ../u-more-recent-posts.php:678
+msgid "Separate IDs with commas"
+msgstr "아이디를 쉼표로 구분하세요"
+
+#: ../u-more-recent-posts.php:522
+msgid "Time limit"
+msgstr "시간 제한"
+
+#: ../u-more-recent-posts.php:523
+#, php-format
+msgid "Last %s days"
+msgstr "최근 %s 일"
+
+#: ../u-more-recent-posts.php:528
+msgid "Navigation"
+msgstr "페이지 네비게이션"
+
+#: ../u-more-recent-posts.php:530
+msgid "Label"
+msgstr "라벨"
+
+#: ../u-more-recent-posts.php:534
+msgid "Position"
+msgstr "위치"
+
+#: ../u-more-recent-posts.php:542
+msgid "Text align"
+msgstr "텍스트 정렬"
+
+#: ../u-more-recent-posts.php:550
+msgid "Page range"
+msgstr "페이지 링크 개수"
+
+#: ../u-more-recent-posts.php:556
+msgid "The number of page links to show before and after the current page."
+msgstr "현재 페이지 링크의 좌우에 보여줄 페이지 링크 개수."
+
+#: ../u-more-recent-posts.php:559
+msgid "Max page links"
+msgstr "최대 페이지 링크 수"
+
+#: ../u-more-recent-posts.php:566
+msgid "Progress image"
+msgstr "로딩 이미지"
+
+#: ../u-more-recent-posts.php:570
+msgid "For bright background color"
+msgstr "밝은 배경색을 위한 이미지"
+
+#: ../u-more-recent-posts.php:574
+msgid "For dark background color"
+msgstr "어두운 배경색을 위한 이미지"
+
+#: ../u-more-recent-posts.php:578
+msgid "Effect"
+msgstr "효과"
+
+#: ../u-more-recent-posts.php:580
+msgid "Appear effect"
+msgstr "나타나는 효과"
+
+#: ../u-more-recent-posts.php:588
+msgid "Appear effect duration"
+msgstr "나타나는 효과 지속시간"
+
+#: ../u-more-recent-posts.php:590
+#: ../u-more-recent-posts.php:603
+#: ../u-more-recent-posts.php:614
+msgid "sec"
+msgstr "초"
+
+#: ../u-more-recent-posts.php:593
+msgid "Disappear effect"
+msgstr "사라지는 효과"
+
+#: ../u-more-recent-posts.php:601
+msgid "Disappear effect duration"
+msgstr "사라지는 효과 지속시간"
+
+#: ../u-more-recent-posts.php:607
+msgid "Auto paginate"
+msgstr "자동으로 페이지 넘기기"
+
+#: ../u-more-recent-posts.php:609
+msgid "Yes"
+msgstr "예"
+
+#: ../u-more-recent-posts.php:612
+msgid "Auto paginate delay"
+msgstr "자동으로 페이지 넘기기 지연 시간"
+
+#: ../u-more-recent-posts.php:619
+msgid "Custom CSS"
+msgstr "사용자 정의 CSS"
+
+#: ../u-more-recent-posts.php:622
+msgid "DOM Structure & Custom CSS"
+msgstr "DOM 구조와 사용자 정의 CSS"
+
+#: ../u-more-recent-posts.php:676
+msgid "Term"
+msgstr "용어(Term)"
+
+#: ../u-more-recent-posts.php:681
+msgid "Operate"
+msgstr "연산"
+
+#: ../u-more-recent-posts.php:693
+msgid "Intersect"
+msgstr "모두 포함"
+
+#~ msgid "Loading"
+#~ msgstr "읽어오는 중"
+
+#~ msgid "Show Comment Count"
+#~ msgstr "코멘트 개수 표시"
+
+#~ msgid "Exclude category IDs"
+#~ msgstr "제외할 카테고리 아이디"
+
+#~ msgid "Include category IDs"
+#~ msgstr "포함할 카테고리 아이디"
+
+#~ msgid "Ajax Loader"
+#~ msgstr "Ajax 로더"
+
+#~ msgid "Progress direction"
+#~ msgstr "진행 방향"
+
+#~ msgid "or"
+#~ msgstr "또는"
+
+#~ msgid "IDs"
+#~ msgstr "아이디"

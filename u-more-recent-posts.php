@@ -2,195 +2,336 @@
 /* 
 Plugin Name: U More Recent Posts
 Plugin URI: http://urlless.com/u-more-recent-posts/
-Description: Based on Wordpress core "Recent Posts" widget, this plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
-Version: 1.3.1
+Description: This plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
+Version: 1.4
 Author: Taehan Lee
 Author URI: http://urlless.com
 */ 
 
-global $wp_version;
-if (version_compare($wp_version, "2.8", "<")) wp_die("This plugin requires WordPress version 2.8 or higher.");
-
 class UMoreRecentPosts {
-	// domain => umrp
-	var $plugin_url;
+
+var $id = 'umrp';
+var $ver = '1.4';
+var $url;
+
+function UMoreRecentPosts(){
+	$this->url = plugin_dir_url(__FILE__);
 	
-	function UMoreRecentPosts(){
-		$this->plugin_url = plugin_dir_url(__FILE__);
-		load_plugin_textdomain('umrp', false, dirname(plugin_basename(__FILE__)).'/lang/');
-		
-		add_action( 'init', array(&$this, 'init') ); 
-		add_action( 'widgets_init', array(&$this, 'widgets_init') ); 
-		add_action( 'wp_ajax_umrp-ajax', array(&$this, 'ajax') );
-		add_action( 'wp_ajax_nopriv_umrp-ajax', array(&$this, 'ajax') );
-	}
+	register_activation_hook( __FILE__, array(&$this, 'activation') );
 	
-	function init() { 
-		if ( ! is_admin() ) {
-			wp_enqueue_script( 'jquery' ); 
-			wp_enqueue_style( 'umrp_style', $this->plugin_url.'u-more-recent-posts.css');
-			wp_enqueue_script( 'umrp_script', $this->plugin_url.'u-more-recent-posts.js', array('jquery'));
-			wp_localize_script( 'umrp_script', 'umrp_settings', array(
-				'ajax_url' => admin_url( 'admin-ajax.php' ), 
-				'nonce' => wp_create_nonce( 'umrp_nonce' )
-			));
-		}
-	}
+	load_plugin_textdomain($this->id, false, dirname(plugin_basename(__FILE__)).'/languages/');
 	
-	function widgets_init() { 
-		register_widget( 'UMoreRecentPostsWidget' ); 
-	}
-	
-	function ajax() {
-		check_ajax_referer( 'umrp_nonce' );
-		
-		switch( $_POST['scope'] ):
-			
-			case 'get_option':
-			$opts = $this->get_widget_option( $_POST['widget_id'] );
-			$opts['cookiepath'] = COOKIEPATH;
-			echo json_encode( $opts );
-			break;
-			
-			case 'get_list':
-			$this->the_list( $_POST['widget_id'], $_POST['paged'], $_POST['current_postid'] );
-			break;
-			
-		endswitch;	
-		die();
-	}
-	
-	function get_widget_option($widget_id){
-		$opts = get_option('widget_umrp');
-		$widget_id = preg_replace('/umrp-/', '', $widget_id);
-		return $opts[intval($widget_id)];
-	}
-	
-	function the_list( $widget_id, $paged='', $current_postid='' ){
-		$opts = $this->get_widget_option($widget_id);
-		
-		$paged = ( empty($paged) AND is_single() AND !empty($_COOKIE['wp-'.$widget_id.'-paged']) ) ? $_COOKIE['wp-'.$widget_id.'-paged'] : $paged;
-		
-		$args = array(
-			'post_type' => $post_type,
-			'posts_per_page' => !empty($opts['number']) ? $opts['number'] : 5,
-			'paged' => intval($paged), 
-			'nopaging' => 0, 
-			'post_status' => 'publish', 
-			'caller_get_posts' => 1
-		);
-		if( ! empty($opts['post_type']) ) $args['post_type'] = $opts['post_type'];
-		if( ! empty($opts['exclude']) ) $args['category__not_in'] = explode(',', $opts['exclude']);
-		if( ! empty($opts['include']) ) $args['category__in'] = explode(',', $opts['include']);
-		if( ! empty($opts['post_type']) AND isset($opts['tax_query'][$opts['post_type']]) ) {
-			$tax_query = $opts['tax_query'][$opts['post_type']];
-			if( !empty($tax_query['operate']) AND !empty($tax_query['terms']) ){
-				$tax_query['terms'] = str_replace(' ', '', $tax_query['terms']);
-				$tax_query['terms'] = explode(',', $tax_query['terms']);
-				$new_tax_query = array(
-					'taxonomy' => $tax_query['taxonomy'],
-					'field' => 'id',
-					'terms' => $tax_query['terms']
-				);
-				$new_tax_query['operator'] = $tax_query['operate']=='include' ? 'IN' : 'NOT IN'; 
-				$args['tax_query'] = array($new_tax_query);
-			}
-		}
-			
-		$args = apply_filters('umrp_query_parameters', $args);
-		
-		$r = new WP_Query($args);
-		if($r->have_posts()): 
-			$pager = $this->pager( array(
-				'posts_per_page' => $args['posts_per_page'],
-				'paged' => $args['paged'],
-				'found_posts' => $r->found_posts,
-				'page_range' => $opts['page_range']
-			) );
-			if( $pager ){
-				$pager = $opts['navi_label'] . ' ' . $pager;
-			}
-			if( $pager AND ($opts['navi_pos']=='top' || $opts['navi_pos']=='both') ) {
-				echo '<div class="umrp-nav umrp-nav-top '.$opts['navi_align'].'">'.$pager.'</div>';
-			}
-			
-			echo '<ul>';
-			while($r->have_posts()): $r->the_post();
-			
-			$title = get_the_title() ? get_the_title() : get_the_ID();
-			$title = apply_filters('the_title', $title);
-			$title_attr = esc_attr($title);
-			
-			$word_limit = isset($opts['length']) ? intval($opts['length']) : 0;
-			if( $word_limit>0 ){
-				$words = explode(' ',$title);
-				if(count($words) > $word_limit) {
-					array_splice($words, $word_limit);
-    				$title = implode(' ', $words) . '&hellip;';
-    			}
-			}
-			$title .= (!empty($opts['show_comment_count']) AND $r->post->comment_count>0) ? ' ('.$r->post->comment_count.')' : '';
-			
-			$li_class = $current_postid==get_the_ID() ? 'current_post' : '';
-			?>
-			<li class="<?php echo $li_class?>"><a href="<?php the_permalink() ?>" title="<?php echo $title_attr; ?>"><?php echo $title; ?></a></li>
-			<?php
-			endwhile; 
-			echo '</ul>';
-			
-			if( $pager AND $opts['navi_pos']!='top' ) {
-				echo '<div class="umrp-nav umrp-nav-bottom '.$opts['navi_align'].'">'.$pager.'</div>';
-			}
-		endif;
-	}
-	
-	function pager($args) {
-		extract($args);
-		$totalpages = ceil( intval($found_posts) / intval($posts_per_page) );
-		if ($totalpages < 2) return;	
-		$currentpage = intval($paged)>1 ? intval($paged) : 1;
-		$block_range = intval($page_range)>1 ? intval($page_range) : 1;
-		$dots = 1;
-		$wing = 1;
-		$block_min = min($currentpage - $block_range, $totalpages - ($block_range + 1) );
-		$block_max = max($currentpage + $block_range, ($block_range + 1) );
-		$has_left = (($block_min - $wing - $dots) > 0) ? true : false;
-		$has_right = (($block_max + $wing + $dots) < $totalpages) ? true : false;
-		$dot_html = "<span class='dots'>&hellip;</span>";
-		$ret = '';
-		
-		if ($has_right AND !$has_left) {
-			$ret .= $this->pager_links(1, $block_max, $currentpage);
-			$ret .= $dot_html;
-			$ret .= $this->pager_links(($totalpages - $wing + 1), $totalpages);
-			
-		} else if ($has_left AND !$has_right) {
-			$ret .= $this->pager_links(1, $wing);
-			$ret .= $dot_html;
-			$ret .= $this->pager_links($block_min, $totalpages, $currentpage);
-			
-		} else if ($has_left AND $has_right) {
-			$ret .= $this->pager_links(1, $wing);
-			$ret .= $dot_html;
-			$ret .= $this->pager_links($block_min, $block_max, $currentpage);
-			$ret .= $dot_html;
-			$ret .= $this->pager_links(($totalpages - $wing + 1), $totalpages);
-			
-		} else {
-			$ret .= $this->pager_links(1, $totalpages, $currentpage);
-		}
-		return $ret;
-	}
-	
-	function pager_links($start, $total, $currentpage=0) {
-		$ret = '';
-		for ( $i=$start; $i<=$total; ++$i )
-		$ret .= $currentpage==$i ? " <em>$i</em> " : " <a href='#'>$i</a> ";
-		return $ret;
+	add_action( 'init', array(&$this, 'init') ); 
+	add_action( 'widgets_init', array(&$this, 'widgets_init') ); 
+	add_action( 'wp_ajax_'.$this->id.'-ajax', array(&$this, 'ajax') );
+	add_action( 'wp_ajax_nopriv_'.$this->id.'-ajax', array(&$this, 'ajax') );
+	add_shortcode( 'u_more_recent_posts', array(&$this, 'shortcode_display'));
+}
+
+function activation() {
+	global $wp_version;
+	if (version_compare($wp_version, "3.1", "<")) 
+		wp_die("This plugin requires WordPress version 3.1 or higher.");
+}
+
+function init() { 
+	if ( ! is_admin() ) {
+		wp_enqueue_script( 'jquery' ); 
+		wp_enqueue_style( $this->id.'-style', $this->url.'inc/style.css', '', $this->ver);
+		wp_enqueue_script( $this->id.'-script', $this->url.'inc/script.js', array('jquery'), $this->ver);
+		wp_localize_script( $this->id.'-script', $this->id.'_vars', array(
+			'ajaxurl' => admin_url( 'admin-ajax.php' ), 
+			'nonce' => wp_create_nonce( $this->id.'_nonce' ),
+		));
+	}else{
+		global $pagenow;
+		if( $pagenow=='widgets.php' )
+			wp_enqueue_style( $this->id.'-admin-style', $this->url.'inc/admin.css', '', $this->ver);
 	}
 }
 
+function widgets_init() { 
+	register_widget( 'UMoreRecentPostsWidget' ); 
+}
 
+function the_list_for_widget( $widget_id, $paged='', $current_postid='' ){
+	$opts = $this->get_widget_option($widget_id);
+	echo $this->get_the_list($opts, $paged, $current_postid, 'wp-'.$widget_id.'-paged');
+}
+
+function the_list_for_shortcode( $list_id, $opts, $paged='', $current_postid='' ){
+	echo $this->get_the_list($opts, $paged, $current_postid, 'wp-'.$list_id.'-paged' );
+}
+
+function get_the_list($opts, $paged='', $current_postid='', $cookie_key='' ){
+	$defaults = $this->get_default_options();
+	$opts = wp_parse_args($opts, $defaults);
+	
+	$paged = ( empty($paged) AND is_single() AND !empty($_COOKIE[$cookie_key]) ) ? $_COOKIE[$cookie_key] : $paged;
+	$paged = max(1, absint($paged));
+	
+	$args = array(
+		'posts_per_page' => !empty($opts['number']) ? $opts['number'] : 5,
+		'paged' => $paged, 
+		'post_status' => 'publish', 
+		'ignore_sticky_posts' => true,
+	);
+	
+	if( !empty($opts['post_type']) ) {
+		$args['post_type'] = $opts['post_type'];
+		
+		if( !empty($opts['tax_query']) AND isset($opts['tax_query'][$opts['post_type']]) ) {
+			$tax_query = $opts['tax_query'][$opts['post_type']];
+			
+			if( !empty($tax_query['taxonomy']) AND !empty($tax_query['terms']) ){
+				$tax_query['terms'] = explode(',', preg_replace('/\s*/', '', $tax_query['terms']));
+				$_tax_query = array(
+					'taxonomy' => $tax_query['taxonomy'],
+					'terms' => $tax_query['terms'],
+					'field' => 'id',
+				);
+				$operator = '';
+				switch($tax_query['operate']){
+					case 'include': $operator = 'IN'; break;
+					case 'exclude': $operator = 'NOT IN'; break;
+					case 'and': $operator = 'AND'; break;
+				}
+				if( !empty($operator) )
+					$_tax_query['operator'] = $operator;
+				
+				$args['tax_query'] = array($_tax_query);
+			}
+		}
+	}
+	
+	$authors = preg_replace('/\s*/', '', $opts['authors']);
+	$author_operate = $opts['author_operate'];
+	$author_operate = ($author_operate=='include'||$author_operate =='exclude') ? $author_operate : '';
+	if( !empty($authors) AND !empty($author_operate) ){
+		if( $author_operate == 'exclude' ){
+			$authors = explode(',', $authors);
+			$ex_authors = array();
+			foreach($authors as $author)
+				$ex_authors[] = '-'.$author;
+			$authors = join(',', $ex_authors);
+		}
+		$args['author'] = $authors;
+	}
+	
+	if( absint($opts['time_limit'])>0 ){
+		set_query_var('umrp_time_limit', $opts['time_limit']);
+		add_filter( 'posts_where', array(&$this, 'filter_where') );
+	}
+	
+	$args = apply_filters('umrp_query_parameters', $args);
+	
+	$q = new WP_Query($args);
+	if ( !$q->have_posts() )
+		return false;
+		
+	$ret = '<ul>';
+	while($q->have_posts()): $q->the_post();
+		$post_id = get_the_ID();
+		
+		if( '' == $title = get_the_title() )
+			$title = $post_id;
+		
+		$title_attr = esc_attr($title);
+		
+		if( $word_limit = absint($opts['length']) ){
+			$words = explode(' ', $title);
+			if(count($words) > $word_limit) {
+				array_splice($words, $word_limit);
+				$title = implode(' ', $words) . '&hellip;';
+			}
+		}
+		
+		// deprecated but support by next upgrade
+		if( !empty($opts['show_comment_count']) AND $comment_count ) 
+			$title .= ' ('.$comment_count.')';
+		
+		$comment_count = $q->post->comment_count;
+		$date = date($opts['date_format'], strtotime($q->post->post_date));
+		$author = get_the_author();
+		
+		$list_format = nl2br($opts['list_format']);
+		$list_format = str_ireplace('%title%', $title, $list_format);
+		$list_format = str_ireplace('%comment_count%', $comment_count, $list_format);
+		$list_format = str_ireplace('%date%', $date, $list_format);
+		$list_format = str_ireplace('%author%', $author, $list_format);
+		if( preg_match('/%thumbnail%/', $list_format) ){
+			$thumbnail = $this->get_post_thumbnail($post_id, $opts['thumbnail_w'], $opts['thumbnail_h']);
+			$list_format = str_ireplace('%thumbnail%', $thumbnail, $list_format);
+		}
+		$title = $list_format;
+		
+		$li_class = $current_postid==$post_id ? 'current_post' : '';
+		$ret .= '<li class="'.$li_class.'"><a href="'.get_permalink().'" title="'.$title_attr.'">'.$title.'</a></li>';
+	endwhile; 
+	$ret .= '</ul>';
+	
+	$max_page = absint($opts['max_page']);
+	$total_page = $max_page>0 ? min($max_page, $q->max_num_pages) : $q->max_num_pages;
+	$page_args = array(
+		'base' => add_query_arg( 'umrp-page', '%#%', home_url('/') ),
+		'total' => $total_page,
+		'current' => $paged,
+		'mid_size' => $opts['page_range'],
+		'prev_next' => false,
+	);
+	$page_links = paginate_links( $page_args);
+	
+	if( $page_links ){
+		$page_links = $opts['navi_label'] . ' ' . $page_links;
+		$page_links = '<div class="umrp-nav %s '.$opts['navi_align'].'">'.$page_links.'</div>';
+		$page_links_top = sprintf($page_links, 'umrp-nav-top');
+		$page_links_bottom = sprintf($page_links, 'umrp-nav-bottom');
+		switch( $opts['navi_pos'] ) {
+			case 'top': $ret = $page_links_top.$ret; break;
+			case 'both': $ret = $page_links_top.$ret.$page_links_bottom; break;
+			default: $ret = $ret.$page_links_bottom; break;
+		}
+	}
+	
+	$progress_img = '';
+	switch( $opts['progress_img'] ){
+		case 'white': $progress_img = 'ajax-loader-white.gif'; break;
+		default: $progress_img = 'ajax-loader.gif'; break;
+	}
+	$progress_img = "<img src='{$this->url}i/{$progress_img}' class='umrp-progress' style='display:none;'>";
+	$ret .= $progress_img;
+	
+	remove_filter( 'posts_where', array(&$this, 'filter_where') );
+	wp_reset_query();
+	return $ret;
+}
+
+function shortcode_display($atts){
+	global $post;
+	$query_args = $this->get_default_options();
+	foreach($query_args as $k=>$v){
+		if( isset($atts[$k]) )
+			$query_args[$k] = $atts[$k];
+	}
+	if( isset($atts['tax_query']) ){
+		$tax_query = wp_parse_args(preg_replace('/&amp;/', '&', $atts['tax_query']));
+		$query_args['tax_query'] = array($query_args['post_type'] => $tax_query);
+	}
+	$query_string = json_encode($query_args);
+	
+	$default_atts = array(
+		'id' => '',
+	);
+	extract( shortcode_atts( $default_atts, $atts ) );
+	
+	$class = $current_postid = '';
+	if( is_single() ){
+		$class = 'single postid-'.$post->ID;
+		$current_postid = $post->ID;
+	}
+	?>
+	<div class="umrp-shortcode" id="<?php echo $id?>">
+		<?php if( $query_args['title'] ){ ?>
+		<h3 class="umrp-title"><?php echo $query_args['title']?></h3>
+		<?php } ?>
+		<div class="umrp-container <?php echo $class?>">
+			<?php echo $this->get_the_list($query_args);?>
+			<!--<?php echo $query_string?>-->
+		</div>
+	</div>
+	<?php
+}
+
+function ajax() {
+	check_ajax_referer( $this->id.'_nonce' );
+	
+	switch( $_POST['action_scope'] ):
+		
+		case 'get_widget_option':
+		$opts = $this->get_widget_option( $_POST['widget_id'] );
+		$opts['cookiepath'] = COOKIEPATH;
+		echo json_encode( $opts );
+		break;
+		
+		case 'the_list_for_widget':
+		$this->the_list_for_widget( $_POST['widget_id'], $_POST['paged'], $_POST['current_postid'] );
+		break;
+		
+		case 'the_list_for_shortcode':
+		$this->the_list_for_shortcode( $_POST['widget_id'], (array) $_POST['options'], $_POST['paged'], $_POST['current_postid'] );
+		break;
+		
+	endswitch;	
+	die();
+}
+
+function filter_where( $where = '' ) {
+	$d = get_query_var('umrp_time_limit');
+	$where .= " AND post_date > '" . date('Y-m-d', strtotime('-'.$d.' days')) . "'";
+	return $where;
+}
+
+
+function get_widget_option($widget_id){
+	$opts = get_option('widget_'.$this->id);
+	$widget_id = (int) preg_replace('/'.$this->id.'-/', '', $widget_id);
+	$opts = $opts[$widget_id];
+	return $opts;
+}
+
+function get_post_thumbnail( $post_id, $w, $h ){
+	$thumb_id = get_post_meta($post_id, '_thumbnail_id', true);
+	$thumb = wp_get_attachment_image_src($thumb_id, 'thumbnail');
+	if( !empty($thumb) ) {
+		$thumb = $thumb[0];
+	} else {
+		$thumb = $this->url.'i/t.gif';
+	}
+	$r = "<div class='umrp-post-thumbnail' style='width:{$w}px; height:{$h}px'>";
+	$r .= "<img src='$thumb' />";
+	$r .= '</div>';
+	return $r;
+}
+
+
+function get_default_options(){
+	return array( 
+		'title'					=> __('Recent Posts', $this->id), 
+		'number' 				=> '5', 
+		'length'				=> '', 
+		'show_comment_count' 	=> '', //deprecated
+		'list_format'			=> '%title%',
+		'date_format'			=> 'F j, Y',
+		'thumbnail_w'			=> get_option('thumbnail_size_w'),
+		'thumbnail_h' 			=> get_option('thumbnail_size_h'),
+		
+		'post_type'				=> 'post',
+		'tax_query'				=> array(),
+		'authors'				=> '',
+		'author_operate'		=> '',
+		'time_limit'			=> '',
+		
+		'appear_effect'			=> '',
+		'appear_effect_dur'		=> 0.3,
+		'disappear_effect'		=> '',
+		'disappear_effect_dur'	=> 0.3,
+		'auto_paginate'			=> '',
+		'auto_paginate_delay'	=> 5,
+		
+		'navi_label'			=> __('Pages:', $this->id),
+		'navi_pos' 				=> 'bottom',
+		'navi_align' 			=> '',
+		'page_range'			=> 1,
+		'max_page'				=> '',
+		
+		'progress_img'			=> '',
+		'custom_css'			=> '',
+	); 
+}
+
+}
+
+$umrp = new UMoreRecentPosts();
 
 
 
@@ -198,278 +339,374 @@ class UMoreRecentPosts {
 
 
 class UMoreRecentPostsWidget extends WP_Widget { 
-	var $plugin_url;
+
+var $url;
+
+function UMoreRecentPostsWidget() {
+	$this->url = plugin_dir_url(__FILE__);
+	$opts = array( 'classname' => 'widget_umrp' ); 
+	$this->WP_Widget( 'umrp', 'U '.__('More Recent Posts', 'umrp'), $opts, array('width'=>420) );
+}
+
+function widget($args, $instance) {
+	global $umrp, $post;
 	
-	function UMoreRecentPostsWidget() {
-		$this->plugin_url = plugin_dir_url(__FILE__);
-		$opts = array( 'classname' => 'widget_umrp' ); 
-		$this->WP_Widget( 'umrp', __('More Recent Posts', 'umrp'), $opts, array('width'=>320) );
+	extract($args);
+	$title = apply_filters('widget_title', $instance['title']);
+	echo $before_widget;
+	if( $title ) echo $before_title . $title . $after_title;
+	
+	$class = $current_postid = '';
+	if( is_single() ){
+		$class = 'single postid-'.$post->ID;
+		$current_postid = $post->ID;
+	}
+	?>
+	<div class="umrp-container <?php echo $class?>">
+		<?php $umrp->the_list_for_widget( $widget_id, '', $current_postid );?>
+	</div>
+	<?php 
+	if( !empty($instance['custom_css']) ){
+		$css = $instance['custom_css'];
+		$css = str_replace('%widget_id%', '#'.$args['widget_id'], $css);
+		$css = preg_replace('/(\r|\n)/', '', $css);
+		echo '<style>'.$css.'</style>';
 	}
 	
-	function widget($args, $instance) {
-		extract($args);
-		$title = apply_filters('widget_title', $instance['title']);
-		echo $before_widget;
-		if( $title ) echo $before_title . $title . $after_title;
-		
-		global $umrp, $post;
-		$class = '';
-		$current_postid = '';
-		if( is_single() ){
-			$class = 'single postid-'.$post->ID;
-			$current_postid = $post->ID;
-		}
-		?>
-		<div class="umrp-container <?php echo $class?>">
-			<div class="umrp-loader"><?php _e('Loading', 'umrp')?></div>
-			<div class="umrp-content">
-				<?php $umrp->the_list( $widget_id, '', $current_postid );?>
-			</div>
-		</div>
-		<?php 
-		echo $after_widget;
-	}
+	echo $after_widget;
+}
+
+function update($new_instance, $old_instance) { 
+
+	$instance = $old_instance; 
+	$instance['title'] 				= strip_tags($new_instance['title']);
+	$instance['number'] 			= absint($new_instance['number']);
+	$instance['length'] 			= preg_replace('/[^0-9]/', '', $new_instance['length'] );
+	$instance['list_format'] 		= trim($new_instance['list_format']);
+	$instance['date_format'] 		= trim($new_instance['date_format']);
+	$instance['thumbnail_w'] 		= absint($new_instance['thumbnail_w']);
+	$instance['thumbnail_h'] 		= absint($new_instance['thumbnail_h']);
 	
-	function update($new_instance, $old_instance) { 
-		$instance = $old_instance; 
-		$instance['title'] = strip_tags($new_instance['title']);
-		$instance['post_type'] = $new_instance['post_type'];
-		$instance['tax_query'] = $new_instance['tax_query'];
-		$instance['number'] = intval($new_instance['number']);
-		$instance['exclude'] = $new_instance['exclude'];
-		$instance['include'] = $new_instance['include'];
-		$instance['length'] = intval($new_instance['length']) ? $new_instance['length'] : '';
-		$instance['show_comment_count'] = $new_instance['show_comment_count'];
-		$instance['effect'] = $new_instance['effect'];
-		$instance['loader_label'] = strip_tags(trim($new_instance['loader_label']));
-		$instance['loader_symbol'] = strip_tags(trim($new_instance['loader_symbol']));
-		$instance['loader_direction'] = $new_instance['loader_direction'];
-		$instance['page_range'] = intval($new_instance['page_range']);
-		$instance['navi_label'] = strip_tags(trim($new_instance['navi_label']));
-		$instance['navi_pos'] = $new_instance['navi_pos'];
-		$instance['navi_align'] = $new_instance['navi_align'];
-		return $instance; 
-	} 
+	$instance['post_type'] 			= $new_instance['post_type'];
+	$instance['tax_query'] 			= array($instance['post_type'] => $new_instance['tax_query'][$instance['post_type']]);
+	$instance['authors'] 			= trim($new_instance['authors']);
+	$instance['author_operate'] 	= $new_instance['author_operate'];
+	$instance['time_limit'] 		= preg_replace('/[^0-9]/', '', $new_instance['time_limit'] );
 	
-	function form($instance) {
-		global $wp_version;
-		$defaults = array( 
-			'title'			=> __('Recent Posts', 'umrp'), 
-			'post_type'		=> 'post',
-			'tax_query'		=> array(),
-			'number' 		=> '5', 
-			'exclude'		=> '', 
-			'include'		=> '', 
-			'length'		=> '', 
-			'show_comment_count' => '',
-			'effect'		=> '',
-			'loader_label'	=> __('Loading', 'umrp'),
-			'loader_symbol'	=> '.',
-			'loader_direction'	=> '',
-			'page_range'	=> 1,
-			'navi_label'	=> __('Pages:', 'umrp'),
-			'navi_pos' 		=> 'bottom',
-			'navi_align' 	=> '',
-		); 
-		$instance = wp_parse_args( (array) $instance, $defaults ); 
-		$title = esc_attr( $instance['title'] ); 
-		$post_type = $instance['post_type'];
-		$tax_query = $instance['tax_query'];
-		$number = esc_attr( $instance['number'] ); 
-		$exclude = esc_attr( $instance['exclude'] ); 
-		$include = esc_attr( $instance['include'] ); 
-		$length = esc_attr( $instance['length'] ); 
-		$show_comment_count = $instance['show_comment_count'];
-		$effect = esc_attr( $instance['effect'] ); 
-		$loader_label = esc_attr( $instance['loader_label'] );
-		$loader_symbol = esc_attr( $instance['loader_symbol'] );
-		$loader_direction = $instance['loader_direction'];
-		$page_range = intval( $instance['page_range'] );
-		$navi_label = esc_attr( $instance['navi_label'] );
-		$navi_pos = $instance['navi_pos'];
-		$navi_align = $instance['navi_align'];
-		?>
+	$instance['appear_effect'] 		= $new_instance['appear_effect'];
+	$instance['appear_effect_dur'] 	= floatval($new_instance['appear_effect_dur']);
+	$instance['disappear_effect'] 	= $new_instance['disappear_effect'];
+	$instance['disappear_effect_dur'] 	= floatval($new_instance['disappear_effect_dur']);
+	$instance['auto_paginate'] 		= $new_instance['auto_paginate'];
+	$instance['auto_paginate_delay']= floatval($new_instance['auto_paginate_delay']);
+	
+	$instance['navi_label'] 		= strip_tags($new_instance['navi_label']);
+	$instance['navi_pos'] 			= $new_instance['navi_pos'];
+	$instance['navi_align'] 		= $new_instance['navi_align'];
+	$instance['page_range'] 		= $new_instance['page_range'];
+	$instance['max_page'] 			= preg_replace('/[^0-9]/', '', $new_instance['max_page'] );
+	
+	$instance['progress_img'] 		= $new_instance['progress_img'];
+	$instance['custom_css'] 		= trim($new_instance['custom_css']);
+	
+	//$instance['show_comment_count'] = $new_instance['show_comment_count']; //deprecated
+	return $instance; 
+} 
+
+function form($instance) {
+	
+	global $umrp;
+	$defaults = $umrp->get_default_options(); 
+	$instance = wp_parse_args( $instance, $defaults ); 
+	extract($instance);
+	
+	$title = esc_attr( $title );
+	$number = absint( $number ); 
+	$length = preg_replace('/[^0-9]/', '', $length );
+	$navi_label = esc_attr( $navi_label );
+	
+	$appear_effects = array(
+		'' => __('None', 'umrp'), 
+		'fadein' => __('Fade In', 'umrp'), 
+		'slidedown' => __('Slide Down', 'umrp'),
+		'slidein' => __('Slide In', 'umrp'),
+	);
+	$disappear_effects = array(
+		'' => __('None', 'umrp'), 
+		'fadeout' => __('Fade Out', 'umrp'), 
+		'slideup' => __('Slide Up', 'umrp'),
+		'slideout' => __('Slide Out', 'umrp'),
+	);
+	
+	$navi_pos_arr = array(
+		'bottom' => __('Bottom', 'umrp'), 
+		'top' => __('Top', 'umrp'), 
+		'both' => __('Both', 'umrp'),
+	);
+	$navi_align_arr = array(
+		'' => __('None', 'umrp'), 
+		'left' => __('Left', 'umrp'), 
+		'center' => __('Center', 'umrp'), 
+		'right' => __('Right', 'umrp'),
+	);
+	?>
+	
+	<p>
+		<a href="http://urlless.com/u-more-recent-posts-demos/" target="_blank" class="umrp-demos-link"><?php _e('View Demos', 'umrp')?></a>
+		<br><span class="description"><?php _e('Demos, Shortcode usage, DOM Structure & Custom CSS', 'umrp')?></span>
+	</p>
+	
+	<div class="umrp-group">
+		<h5><?php _e('General settings', 'umrp')?></h5>
 		<p>
-			<label><?php _e('Title', 'umrp'); ?>:</label>
-			<input name="<?php echo $this->get_field_name('title'); ?>" value="<?php echo $title; ?>" type="text" class="widefat" />
+			<?php _e('Title', 'umrp'); ?>:
+			<input id="<?php echo $this->get_field_id('title'); ?>" name="<?php echo $this->get_field_name('title'); ?>" value="<?php echo $title; ?>" type="text" />
 		</p>
 		
 		<p>
-			<label><?php _e('Number of posts to show', 'umrp'); ?>: </label>
-			<input name="<?php echo $this->get_field_name('number'); ?>" value="<?php echo $number; ?>" type="text" size="2" />
+			<?php _e('Number of posts to show', 'umrp'); ?>: 
+			<input name="<?php echo $this->get_field_name('number'); ?>" value="<?php echo $number; ?>" type="text" size="1" />
 		</p>
 		
 		<p>
-			<label><?php _e('Post title length', 'umrp'); ?>: </label>
-			<input name="<?php echo $this->get_field_name('length'); ?>" value="<?php echo $length; ?>" type="text" size="3" /> 
+			<?php _e('Post title length', 'umrp'); ?>:
+			<input name="<?php echo $this->get_field_name('length'); ?>" value="<?php echo $length; ?>" type="text" size="1" /> 
 			<?php _e('words', 'umrp'); ?>
 		</p>
-		
 		<p>
-			<label><input type="checkbox" name="<?php echo $this->get_field_name('show_comment_count'); ?>" value="1" <?php echo !empty($show_comment_count) ? 'checked="checked"' : '';?>> 
-			<?php _e('Show Comment Count', 'umrp'); ?>: </label>
+			<?php _e('List format', 'umrp'); ?>:
+			<span class="description"><small>(<?php _e('Enable HTML, Line break', 'umrp')?>)</small></span>
+			<textarea name="<?php echo $this->get_field_name('list_format'); ?>" rows="3" class="widefat" style="margin:3px 0"><?php echo esc_textarea($list_format)?></textarea>
+			<?php _e('Replace Keywords', 'umrp'); ?>:
+			<code>%title%, %date%, $author%, %comment_count%, %thumbnail%</code>
 		</p>
 		
 		<p>
-			<label><?php _e('Show Effect', 'umrp'); ?>: </label>
-			<select name="<?php echo $this->get_field_name('effect'); ?>">
-				<?php 
-				$effects = array('none'=>'none', 'fadein'=>'Fade In', 'slidedown'=>'Slide Down');
-				foreach($effects as $key=>$val){
-					$selected = $effect==$key ? 'selected="selected"' : '';
-					?>
-					<option value="<?php echo $key; ?>" <?php echo $selected; ?>><?php echo $val; ?></option>
-					<?php
-				} ?>
+			<?php _e('Date format', 'umrp'); ?>:
+			<input name="<?php echo $this->get_field_name('date_format'); ?>" value="<?php echo $date_format; ?>" type="text" size="10"/>
+		</p>
+		
+		<p>
+			<?php _e('Thumbnail size', 'umrp'); ?>:
+			<input name="<?php echo $this->get_field_name('thumbnail_w'); ?>" value="<?php echo $thumbnail_w; ?>" type="text" size="1"/>
+			&nbsp; x &nbsp;
+			<input name="<?php echo $this->get_field_name('thumbnail_h'); ?>" value="<?php echo $thumbnail_h; ?>" type="text" size="1"/>
+		</p>
+		
+	</div>
+	
+	<div class="umrp-group">
+		<h5><?php _e('Filtering', 'umrp')?></h5>
+		
+		<p><strong><?php _e('Post Type', 'umrp')?> & <?php _e('Taxonomy', 'umrp')?>:</strong></p>
+		<ul class="umrp-types">
+			<?php $this->get_post_type_chooser($post_type, $tax_query);?>
+		</ul>
+		
+		<hr>
+		
+		<p><strong><?php _e('Author', 'umrp')?></strong>:
+		<label><input name="<?php echo $this->get_field_name('author_operate'); ?>" value="" type="radio" <?php checked($author_operate=='')?> /> 
+			<?php _e('None', 'umrp')?></label>
+		<label><input name="<?php echo $this->get_field_name('author_operate'); ?>" value="include" type="radio" <?php checked($author_operate=='include')?> /> 
+			<?php _e('Include', 'umrp')?></label>
+		<label><input name="<?php echo $this->get_field_name('author_operate'); ?>" value="exclude" type="radio" <?php checked($author_operate, 'exclude')?> /> 
+			<?php _e('Exclude', 'umrp')?></label><p>
+		
+		<p><?php _e('If you select Include or Exclude, input author IDs', 'umrp')?>:
+		<input name="<?php echo $this->get_field_name('authors'); ?>" value="<?php echo $authors; ?>" type="text" size="6" /> 
+		<br><span class="description"><?php _e('Separate IDs with commas', 'umrp'); ?>.</span></p>
+		
+		<hr>
+		
+		<p><strong><?php _e('Time limit', 'umrp')?></strong>:
+		<?php printf(__('Last %s days' , 'umrp'), '<input name="'.$this->get_field_name('time_limit').'" value="'.$time_limit.'" type="text" size="2" />');?>
+		
+	</div>
+	
+	<div class="umrp-group">
+		<h5><?php _e('Navigation', 'umrp')?></h5>
+		<p>
+			<?php _e('Label', 'umrp'); ?>:
+			<input name="<?php echo $this->get_field_name('navi_label'); ?>" value="<?php echo $navi_label; ?>" type="text" />
+		<p>
+		<p>
+			<?php _e('Position', 'umrp'); ?>: 
+			<select name="<?php echo $this->get_field_name('navi_pos'); ?>">
+				<?php foreach($navi_pos_arr as $key=>$val){ ?>
+				<option value="<?php echo $key; ?>" <?php selected($navi_pos==$key)?>><?php echo $val?></option>
+				<?php } ?>
 			</select>
 		</p>
-	
-		<?php if (version_compare($wp_version, "3.1", "<")): ?>
-		
 		<p>
-			<label><?php _e('Exclude category IDs', 'umrp'); ?>: </label>
-			<input name="<?php echo $this->get_field_name('exclude'); ?>" value="<?php echo $exclude; ?>" type="text" class="widefat" />
-			<br><small><?php _e('Separated by commas', 'umrp'); ?>.</small>
-		</p>
-		<p>
-			<label><?php _e('Include category IDs', 'umrp'); ?>: </label>
-			<input name="<?php echo $this->get_field_name('include'); ?>" value="<?php echo $include; ?>" type="text" class="widefat" />
-			<br><small><?php _e('Separated by commas', 'umrp'); ?>.</small>
-		</p>
-		
-		<?php else: ?>
-		
-		<div class="umrp-widget-div">
-			<p><strong><?php _e('Post Type', 'umrp')?></strong></p>
-			<ul><?php $this->get_post_type_chooser($post_type, $tax_query);?></ul>
-			<input type="hidden" name="<?php echo $this->get_field_name('exclude'); ?>" value="" />
-			<input type="hidden" name="<?php echo $this->get_field_name('include'); ?>" value="" />
-		</div>
-		
-		<?php endif; ?>
-		
-		<div class="umrp-widget-div">
-			<p><strong><?php _e('Ajax Loader', 'umrp')?></strong></p>
-			<p>
-				<label><?php _e('Label', 'umrp'); ?>:</label>
-				<input name="<?php echo $this->get_field_name('loader_label'); ?>" value="<?php echo $loader_label; ?>" type="text" /></p> 
-			<p>
-			
-			<p>
-				<label><?php _e('Progress symbol', 'umrp'); ?>:</label>
-				<input name="<?php echo $this->get_field_name('loader_symbol'); ?>" value="<?php echo $loader_symbol; ?>" type="text" size="1" /></p> 
-			<p>
-			
-			<p>
-				<label><?php _e('Progress direction', 'umrp')?>:</label>
-				<label><input type="radio" name="<?php echo $this->get_field_name('loader_direction'); ?>" value="" <?php echo $loader_direction!='left' ? 'checked="checked"' : '' ?> /> <?php _e('Right', 'umrp')?></label>
-				<label><input type="radio" name="<?php echo $this->get_field_name('loader_direction'); ?>" value="left" <?php echo $loader_direction=='left' ? 'checked="checked"' : '' ?> /> <?php _e('Left', 'umrp')?></label>
-			</p>
-		</div>
-		
-		<div class="umrp-widget-div">
-			<p><strong><?php _e('Navigation', 'umrp')?></strong></p>
-			<p>
-				<label><?php _e('Label', 'umrp'); ?>:</label>
-				<input name="<?php echo $this->get_field_name('navi_label'); ?>" value="<?php echo $navi_label; ?>" type="text" /></p> 
-			<p>
-			<p>
-				<label><?php _e('Page range', 'umrp'); ?>:</label>
-				<select name="<?php echo $this->get_field_name('page_range'); ?>">
-					<?php for ($i=1; $i<=10; $i++) : ?>
-					<option value="<?php echo $i; ?>" <?php echo ($i == $page_range) ? "selected='selected'" : ""; ?>><?php echo $i; ?></option>
-					<?php endfor; ?>
-				</select>
-				<br><small><?php _e('The number of page links to show before and after the current page.', 'umrp'); ?></small>
-			</p>
-			<p>
-				<label><?php _e('Position', 'umrp'); ?>: </label>
-				<select name="<?php echo $this->get_field_name('navi_pos'); ?>">
-					<?php 
-					$navi_pos_arr = array('bottom'=>'Bottom', 'top'=>'Top', 'both'=>'Both');
-					foreach($navi_pos_arr as $key=>$val){
-						$selected = $navi_pos==$key ? 'selected="selected"' : '';
-						?>
-						<option value="<?php echo $key; ?>" <?php echo $selected; ?>><?php echo $val; ?></option>
-						<?php
-					} ?>
-				</select>
-			</p>
-			<p>
-				<label><?php _e('Text align', 'umrp'); ?>:</label>
-				<select name="<?php echo $this->get_field_name('navi_align'); ?>">
-					<?php 
-					$navi_align_arr = array(''=>'Normal (inherit)', 'left'=>'Left', 'center'=>'Center', 'right'=>'Right');
-					foreach ($navi_align_arr as $key=>$val) : ?>
-					<option value="<?php echo $key; ?>" <?php echo ($key==$navi_align) ? "selected='selected'" : ""; ?>><?php echo $val; ?></option>
-					<?php endforeach; ?>
-				</select>
-			</p>
-		</div>
-		
-		<style type="text/css">
-		.umrp-widget-div {background:#f5f5f5; border: 1px dashed #ccc; padding: 5px; margin-bottom:10px;}
-		</style>
-		<?php 
-	}
-	
-	function get_post_type_chooser($saved_post_type, $saved_tax_queries){
-		$available_types = get_post_types();
-		$available_types = $this->posttypes_filter($available_types);
-		foreach( $available_types as $available_type ) {
-			$post_type_object =get_post_type_object($available_type);
-			$saved_post_type_chk = ($available_type==$saved_post_type) ? 'checked="checked"' : '';
-			$related_taxonomies = array();
-			$available_taxonomies = get_taxonomies();
-			foreach($available_taxonomies as $available_taxonomy){
-				$taxonomy = get_taxonomy($available_taxonomy);
-				if( in_array($available_type, $taxonomy->object_type) ) 
-					$related_taxonomies[$taxonomy->name] = $taxonomy->label;
-			}
-			?>
-			<li style="margin: 10px 0;">
-				<label><input type="radio" name="<?php echo $this->get_field_name('post_type'); ?>" value="<?php echo $available_type?>" <?php echo $saved_post_type_chk?> /> <?php echo $post_type_object->label?></label>
-				
-				<?php 
-				if( count($related_taxonomies) ){
-					if( isset($saved_tax_queries[$available_type]) ){
-						$saved_tax_query = $saved_tax_queries[$available_type];
-						$saved_terms = $saved_tax_query['terms'];
-						$saved_operate_ex_chk = (!empty($saved_terms) AND $saved_tax_query['operate']=='exclude') ? 'checked="checked"' : '';
-						$saved_operate_in_chk = (!empty($saved_terms) AND $saved_tax_query['operate']=='include') ? 'checked="checked"' : '';
-						$saved_taxonomy = $saved_tax_query['taxonomy'];
-					}
-					?>
-				<div style="margin-left: 20px;">
-					<input type="radio" name="<?php echo $this->get_field_name('tax_query')?>[<?php echo $available_type?>][operate]" value="exclude" <?php echo $saved_operate_ex_chk?>><?php _e('Exclude', 'umrp')?> 
-					<small><?php _e('or', 'umrp')?></small>
-					<input type="radio" name="<?php echo $this->get_field_name('tax_query')?>[<?php echo $available_type?>][operate]" value="include" <?php echo $saved_operate_in_chk?>><?php _e('Include', 'umrp')?>
-					<select name="<?php echo $this->get_field_name('tax_query')?>[<?php echo $available_type?>][taxonomy]" >
-						<?php foreach($related_taxonomies as $related_taxonomy=>$related_taxonomy_label){ 
-						$saved_taxonomy_selected = $related_taxonomy==$saved_taxonomy ? 'selected="selected"' : '';
-						?>
-						<option value="<?php echo $related_taxonomy?>" <?php echo $saved_taxonomy_selected?>><?php echo $related_taxonomy_label?></option>
-						<?php } ?>
-					</select> <?php _e('IDs', 'umrp')?>
-					<input type="text" class="widefat" name="<?php echo $this->get_field_name('tax_query')?>[<?php echo $available_type?>][terms]" value="<?php echo $saved_terms?>" />
-					<small><?php _e('Separated by commas', 'umrp'); ?>.</small>
-				</div>
+			<?php _e('Text align', 'umrp'); ?>:
+			<select name="<?php echo $this->get_field_name('navi_align'); ?>">
+				<?php foreach ($navi_align_arr as $key=>$val){ ?>
+				<option value="<?php echo $key; ?>" <?php selected($key==$navi_align)?>><?php echo $val?></option>
 				<?php } ?>
-			</li>
-		<?php 
-		}
-	}
+			</select>
+		</p>
+		<p>
+			<?php _e('Page range', 'umrp'); ?>:
+			<select name="<?php echo $this->get_field_name('page_range'); ?>">
+				<?php for ($i=1; $i<=10; $i++){ ?>
+				<option value="<?php echo $i; ?>" <?php selected($i==$page_range)?>><?php echo $i?></option>
+				<?php } ?>
+			</select>
+			<br><span class="description"><?php _e('The number of page links to show before and after the current page.', 'umrp'); ?></span>
+		</p>
+		<p>
+			<?php _e('Max page links', 'umrp'); ?>:
+			<input name="<?php echo $this->get_field_name('max_page'); ?>" value="<?php echo $max_page; ?>" type="text" size="2" />
+		</p>
+		
+	</div>
 	
-	function posttypes_filter($posttypes){
-	    foreach($posttypes as $key => $val) {
-	        if($val=='page'||$val=='attachment'||$val=='revision'||$val=='nav_menu_item'){
-	            unset($posttypes[$key]);
-	        }
-	    }
-	    return $posttypes;
+	<div class="umrp-group progress-image">
+		<h5><?php _e('Progress image', 'umrp')?></h5>
+		
+		<p><label><input type="radio" name="<?php echo $this->get_field_name('progress_img'); ?>" value="" <?php checked($progress_img, '')?> />
+		<img src="<?php echo $this->url?>i/ajax-loader.gif">
+		<span class="description"><?php _e('For bright background color', 'umrp')?></span></label></p>
+		
+		<p style="background:#000;"><label><input type="radio" name="<?php echo $this->get_field_name('progress_img'); ?>" value="white" <?php checked($progress_img, 'white')?> />
+		<img src="<?php echo $this->url?>i/ajax-loader-white.gif">
+		<span class="description"><?php _e('For dark background color', 'umrp')?></span></label></p>
+	</div>
+	
+	<div class="umrp-group">
+		<h5><?php _e('Effect', 'umrp')?></h5>
+		<p>
+			<?php _e('Appear effect', 'umrp'); ?>: 
+			<select name="<?php echo $this->get_field_name('appear_effect'); ?>">
+				<?php foreach($appear_effects as $key=>$val){ ?>
+				<option value="<?php echo $key?>" <?php selected($appear_effect==$key)?>><?php echo $val?></option>
+				<?php } ?>
+			</select>
+		</p>
+		<p>
+			<?php _e('Appear effect duration', 'umrp'); ?>: 
+			<input name="<?php echo $this->get_field_name('appear_effect_dur'); ?>" value="<?php echo $appear_effect_dur; ?>" type="text" size="2"/>
+			<?php _e('sec', 'umrp')?>
+		</p>
+		<p>
+			<?php _e('Disappear effect', 'umrp'); ?>: 
+			<select name="<?php echo $this->get_field_name('disappear_effect'); ?>">
+				<?php foreach($disappear_effects as $key=>$val){ ?>
+				<option value="<?php echo $key?>" <?php selected($disappear_effect==$key)?>><?php echo $val?></option>
+				<?php } ?>
+			</select>
+		</p>
+		<p>
+			<?php _e('Disappear effect duration', 'umrp'); ?>: 
+			<input name="<?php echo $this->get_field_name('disappear_effect_dur'); ?>" value="<?php echo $disappear_effect_dur; ?>" type="text" size="2"/>
+			<?php _e('sec', 'umrp')?>
+		</p>
+		<hr />
+		<p>
+			<?php _e('Auto paginate', 'umrp'); ?>: 
+			<label><input type="checkbox" name="<?php echo $this->get_field_name('auto_paginate'); ?>" value="1" <?php checked($auto_paginate, '1')?>/>
+			<?php _e('Yes', 'umrp')?></label>
+		</p>
+		<p>
+			<?php _e('Auto paginate delay', 'umrp'); ?>: 
+			<input name="<?php echo $this->get_field_name('auto_paginate_delay'); ?>" value="<?php echo $auto_paginate_delay; ?>" type="text" size="2"/>
+			<?php _e('sec', 'umrp')?>
+		</p>
+	</div>
+	
+	<div class="umrp-group">
+		<h5><?php _e('Custom CSS', 'umrp')?></h5>
+		<p><textarea name="<?php echo $this->get_field_name('custom_css'); ?>" class="widefat" rows="10"><?php echo $custom_css?></textarea></p>
+		<p><?php _e('Replace Keywords', 'umrp'); ?>: <code>%widget_id%</code></p>
+		<a href="http://urlless.com/u-more-recent-posts-demos/#dom-structure" target="_blank"><?php _e('DOM Structure & Custom CSS', 'umrp')?></a>
+	</div>
+	
+	<p>
+		<a href="http://urlless.com/u-more-recent-posts-demos/" target="_blank" class="umrp-demos-link"><?php _e('View Demos', 'umrp')?></a>
+		<br><span class="description"><?php _e('Demos, Shortcode usage, DOM Structure & Custom CSS', 'umrp')?></span>
+	</p>
+	
+	<!--
+	<div class="umrp-sprite"></div>
+	<script>window.onload=function() { jQuery('.umrp-sprite').parents('.widget').find('a.widget-action').click();}</script>
+	-->
+	<?php 
+}
+
+function get_post_type_chooser($saved_type, $saved_taxs){
+	$types = $this->posttypes_filter( get_post_types() );
+	foreach( $types as $type ) {
+		$type_object = get_post_type_object($type);
+		$taxs = array();
+		if( $_taxs = get_taxonomies() ){
+			foreach($_taxs as $tax){
+				$tax = get_taxonomy($tax);
+				if( in_array($type, $tax->object_type) ) 
+					$taxs[$tax->name] = $tax->label;
+			}
+		}
+		?>
+	<li>
+		<label><input type="radio" name="<?php echo $this->get_field_name('post_type'); ?>" value="<?php echo $type?>" <?php checked($type==$saved_type)?> /> 
+		<strong><?php echo $type_object->label?></strong></label>
+		<?php 
+		if( !empty($taxs) ){
+			$saved_tax = $saved_terms = $saved_operate = $children_class = '';
+			if( isset($saved_taxs[$type]) ){
+				$_saved_taxs = $saved_taxs[$type];
+				$saved_tax = isset($_saved_taxs['taxonomy']) ? $_saved_taxs['taxonomy'] : '';
+				$saved_terms = isset($_saved_taxs['terms']) ? $_saved_taxs['terms'] : '';
+				$saved_operate = isset($_saved_taxs['operate']) ? $_saved_taxs['operate'] : '';
+			}
+			$field_name = $this->get_field_name('tax_query').'['.$type.']';
+			?>
+		
+		<div class="children">
+			<p>
+				<?php _e('Taxonomy', 'umrp')?>:
+				<select name="<?php echo $field_name?>[taxonomy]">
+					<option value=""></option>
+					<?php foreach($taxs as $k=>$v){ ?>
+					<option value="<?php echo $k?>" <?php selected($k==$saved_tax)?>><?php echo $v?></option>
+					<?php } ?>
+				</select> 
+			</p>
+			<p>
+				<?php _e('Term', 'umrp')?> IDs:
+				<input type="text" name="<?php echo $field_name?>[terms]" value="<?php echo $saved_terms?>" size="12" />
+				<span class="description"><?php _e('Separate IDs with commas', 'umrp'); ?>.</span>
+			</p>
+			<p>
+				<?php _e('Operate', 'umrp')?>:
+				
+				<label><input type="radio" name="<?php echo $field_name?>[operate]" value="" <?php checked($saved_operate=='')?>>
+				<?php _e('None', 'umrp')?></label>
+				
+				<label><input type="radio" name="<?php echo $field_name?>[operate]" value="include" <?php checked($saved_operate=='include')?>>
+				<?php _e('Include', 'umrp')?><small>(IN)</small></label>
+				
+				<label><input type="radio" name="<?php echo $field_name?>[operate]" value="exclude" <?php checked($saved_operate=='exclude')?>>
+				<?php _e('Exclude', 'umrp')?><small>(NOT IN)</small></label>
+				
+				<label><input type="radio" name="<?php echo $field_name?>[operate]" value="and" <?php checked($saved_operate=='and')?>>
+				<?php _e('Intersect', 'umrp')?><small>(AND)</small></label>
+			</p>
+		</div>
+		<?php } ?>
+	</li>
+	<?php 
 	}
 }
 
+function posttypes_filter($posttypes){
+    foreach($posttypes as $key => $val) {
+        if($val=='page'||$val=='attachment'||$val=='revision'||$val=='nav_menu_item'){
+            unset($posttypes[$key]);
+        }
+    }
+    return $posttypes;
+}
+}
 
-$umrp = new UMoreRecentPosts();
 
