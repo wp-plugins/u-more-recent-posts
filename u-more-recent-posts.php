@@ -2,7 +2,7 @@
 /* 
 Plugin Name: U More Recent Posts
 Plugin URI: http://urlless.com/u-more-recent-posts/
-Description: This plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
+Description: This plugin make it possible to navigate more recent posts without refreshing screen.
 Version: 1.4
 Author: Taehan Lee
 Author URI: http://urlless.com

@@ -6,11 +6,11 @@ Requires at least: 3.1
 Tested up to: 3.2.1
 Stable tag: 1.4
 
-This plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
+This plugin make it possible to navigate more recent posts without refreshing screen.
 
 == Description ==
 
-This plugin is redesigned to make it possible to navigate more recent posts without refreshing screen.
+This plugin make it possible to navigate more recent posts without refreshing screen.
 
 = Features =
 * Navigate more recent posts without refreshing screen (AJAX).
