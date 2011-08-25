@@ -1,0 +1,57 @@
+.umrp-group {
+	background:#fff; 
+	border: 1px solid #ddd; 
+	padding: 10px; 
+	margin-bottom:10px; 
+	border-radius: 3px;
+}
+.umrp-group h5 { 
+	font-size: 12px; 
+	margin: -10px; 
+	border-bottom: 1px solid #ddd; 
+	background: #f0f0f0; 
+	padding: 4px 10px; 
+	margin-bottom: 10px;
+}
+.umrp-types li { 
+	border-bottom: 1px dashed #ddd; 
+	padding-bottom: 10px; 
+	margin-bottom: 10px;
+} 
+.umrp-types li:last-child {
+	border-bottom: none; 
+	padding-bottom: 0; 
+	margin-bottom: 0;
+} 
+.umrp-types .children { 
+	margin-left: 17px; 
+}
+.umrp-types .children p { 
+	margin: 5px 0;
+}
+.umrp-group.progress-image p { 
+	padding: 3px 5px; 
+	margin: 0;
+	border-radius: 3px;
+}
+.umrp-group.progress-image img { 
+	margin: 0 10px;
+}
+
+.umrp-group p:last-child {
+	margin-bottom: 0;
+}
+
+.umrp-group hr {
+	height: 1px;
+	border: none;
+	background: #ddd;
+	margin: 15px 0;
+}
+
+.umrp-demos-link {
+	font-size:24px; 
+	line-height:30px;
+	font-family: Georgia;
+}
+
