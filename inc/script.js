@@ -62,8 +62,10 @@ var UMRP_Widget = function(t){
 		progress = $t.find('.umrp-progress');
 		nav = $t.find('.umrp-nav');
 		
-		var list_pos = list.position();
-		progress.css({top: list_pos.top});
+		if( progress.length ){
+			var list_pos = list.position();
+			progress.css({top: list_pos.top});
+		}
 	}
 	
 	var get_list = function( paged ) {
