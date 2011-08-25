@@ -3,7 +3,7 @@
 Plugin Name: U More Recent Posts
 Plugin URI: http://urlless.com/u-more-recent-posts/
 Description: This plugin make it possible to navigate more recent posts without refreshing screen.
-Version: 1.4
+Version: 1.4.1
 Author: Taehan Lee
 Author URI: http://urlless.com
 */ 
@@ -11,7 +11,7 @@ Author URI: http://urlless.com
 class UMoreRecentPosts {
 
 var $id = 'umrp';
-var $ver = '1.4';
+var $ver = '1.4.1';
 var $url;
 
 function UMoreRecentPosts(){
@@ -54,31 +54,87 @@ function widgets_init() {
 	register_widget( 'UMoreRecentPostsWidget' ); 
 }
 
-function the_list_for_widget( $widget_id, $paged='', $current_postid='' ){
-	$opts = $this->get_widget_option($widget_id);
-	echo $this->get_the_list($opts, $paged, $current_postid, 'wp-'.$widget_id.'-paged');
+function ajax() {
+	check_ajax_referer( $this->id.'_nonce' );
+	
+	switch( $_POST['action_scope'] ):
+		
+		case 'get_widget_option':
+		$opts = $this->get_widget_option( $_POST['widget_id'] );
+		$opts['cookiepath'] = COOKIEPATH;
+		echo json_encode( $opts );
+		break;
+		
+		case 'the_list_for_widget':
+		$args = array(
+			'widget_id' => $_POST['widget_id'], 
+			'paged' => $_POST['paged'],
+			'current_postid' => $_POST['current_postid'], 
+		);
+		$this->the_list_for_widget( $args );
+		break;
+		
+		case 'the_list_for_shortcode':
+		$args = array(
+			'widget_id' => $_POST['widget_id'], 
+			'paged' => $_POST['paged'],
+			'current_postid' => $_POST['current_postid'], 
+			'options' => (array) $_POST['options'],
+		);
+		$this->the_list_for_shortcode( $args );
+		break;
+		
+	endswitch;	
+	die();
 }
 
-function the_list_for_shortcode( $list_id, $opts, $paged='', $current_postid='' ){
-	echo $this->get_the_list($opts, $paged, $current_postid, 'wp-'.$list_id.'-paged' );
+function get_widget_option($widget_id){
+	$all_opts = get_option('widget_'.$this->id);
+	$index = (int) preg_replace('/'.$this->id.'-/', '', $widget_id);
+	$opts = $all_opts[$index];
+	return $opts;
 }
 
-function get_the_list($opts, $paged='', $current_postid='', $cookie_key='' ){
-	$defaults = $this->get_default_options();
-	$opts = wp_parse_args($opts, $defaults);
+function the_list_for_widget( $args ){
+	if( empty($args['widget_id']) )
+		return false;
+	$args['options'] = $this->get_widget_option( $args['widget_id'] );
+	$args['cookie_key'] = 'wp-'.$args['widget_id'].'-paged';
+	echo $this->get_the_list($args);
+}
+
+function the_list_for_shortcode( $args ){
+	if( empty($args['widget_id']) )
+		return false;
+	$args['cookie_key'] = 'wp-'.$args['widget_id'].'-paged';
+	echo $this->get_the_list( $args );
+}
+
+function get_the_list( $args ){
+	$default_args = array(
+		'options' => array(),
+		'paged' => '', 
+		'current_postid' => '', 
+		'cookie_key' => '',
+	);
+	$args = wp_parse_args($args, $default_args);
+	extract($args);
+	
+	$default_options = $this->get_default_options();
+	$opts = wp_parse_args($options, $default_options);
 	
 	$paged = ( empty($paged) AND is_single() AND !empty($_COOKIE[$cookie_key]) ) ? $_COOKIE[$cookie_key] : $paged;
 	$paged = max(1, absint($paged));
 	
-	$args = array(
-		'posts_per_page' => !empty($opts['number']) ? $opts['number'] : 5,
+	$query_args = array(
+		'posts_per_page' => $opts['number'],
 		'paged' => $paged, 
 		'post_status' => 'publish', 
 		'ignore_sticky_posts' => true,
 	);
 	
 	if( !empty($opts['post_type']) ) {
-		$args['post_type'] = $opts['post_type'];
+		$query_args['post_type'] = $opts['post_type'];
 		
 		if( !empty($opts['tax_query']) AND isset($opts['tax_query'][$opts['post_type']]) ) {
 			$tax_query = $opts['tax_query'][$opts['post_type']];
@@ -99,7 +155,7 @@ function get_the_list($opts, $paged='', $current_postid='', $cookie_key='' ){
 				if( !empty($operator) )
 					$_tax_query['operator'] = $operator;
 				
-				$args['tax_query'] = array($_tax_query);
+				$query_args['tax_query'] = array($_tax_query);
 			}
 		}
 	}
@@ -115,7 +171,7 @@ function get_the_list($opts, $paged='', $current_postid='', $cookie_key='' ){
 				$ex_authors[] = '-'.$author;
 			$authors = join(',', $ex_authors);
 		}
-		$args['author'] = $authors;
+		$query_args['author'] = $authors;
 	}
 	
 	if( absint($opts['time_limit'])>0 ){
@@ -123,13 +179,13 @@ function get_the_list($opts, $paged='', $current_postid='', $cookie_key='' ){
 		add_filter( 'posts_where', array(&$this, 'filter_where') );
 	}
 	
-	$args = apply_filters('umrp_query_parameters', $args);
+	$query_args = apply_filters('umrp_query_parameters', $query_args);
 	
-	$q = new WP_Query($args);
+	$q = new WP_Query($query_args);
 	if ( !$q->have_posts() )
 		return false;
 		
-	$ret = '<ul>';
+	$ret = '<ul class="umrp-list">';
 	while($q->have_posts()): $q->the_post();
 		$post_id = get_the_ID();
 		
@@ -173,7 +229,8 @@ function get_the_list($opts, $paged='', $current_postid='', $cookie_key='' ){
 	$max_page = absint($opts['max_page']);
 	$total_page = $max_page>0 ? min($max_page, $q->max_num_pages) : $q->max_num_pages;
 	$page_args = array(
-		'base' => add_query_arg( 'umrp-page', '%#%', home_url('/') ),
+		'base' => '#%#%',
+		'format' => '',
 		'total' => $total_page,
 		'current' => $paged,
 		'mid_size' => $opts['page_range'],
@@ -182,8 +239,8 @@ function get_the_list($opts, $paged='', $current_postid='', $cookie_key='' ){
 	$page_links = paginate_links( $page_args);
 	
 	if( $page_links ){
-		$page_links = $opts['navi_label'] . ' ' . $page_links;
-		$page_links = '<div class="umrp-nav %s '.$opts['navi_align'].'">'.$page_links.'</div>';
+		$page_links_label = $opts['navi_label'] ? '<span class="umrp-nav-label">'.$opts['navi_label'].'</span> ' : '';
+		$page_links = '<div class="umrp-nav %s '.$opts['navi_align'].'">'.$page_links_label.$page_links.'</div>';
 		$page_links_top = sprintf($page_links, 'umrp-nav-top');
 		$page_links_bottom = sprintf($page_links, 'umrp-nav-bottom');
 		switch( $opts['navi_pos'] ) {
@@ -208,62 +265,46 @@ function get_the_list($opts, $paged='', $current_postid='', $cookie_key='' ){
 
 function shortcode_display($atts){
 	global $post;
-	$query_args = $this->get_default_options();
-	foreach($query_args as $k=>$v){
-		if( isset($atts[$k]) )
-			$query_args[$k] = $atts[$k];
-	}
-	if( isset($atts['tax_query']) ){
-		$tax_query = wp_parse_args(preg_replace('/&amp;/', '&', $atts['tax_query']));
-		$query_args['tax_query'] = array($query_args['post_type'] => $tax_query);
-	}
-	$query_string = json_encode($query_args);
 	
 	$default_atts = array(
-		'id' => '',
+		'id' => 'umrp-shortcode',
 	);
 	extract( shortcode_atts( $default_atts, $atts ) );
 	
-	$class = $current_postid = '';
+	$opts = $this->get_default_options();
+	foreach($opts as $k=>$v){
+		if( isset($atts[$k]) )
+			$opts[$k] = $atts[$k];
+	}
+	if( isset($atts['tax_query']) ){
+		$opts['tax_query'] = array($opts['post_type'] => wp_parse_args(preg_replace('/&amp;/', '&', $atts['tax_query'])));
+	}
+	
+	$container_class = 'shortcode-type';
+	$current_postid = '';
 	if( is_single() ){
-		$class = 'single postid-'.$post->ID;
+		$container_class .= ' single postid-'.$post->ID;
 		$current_postid = $post->ID;
 	}
+	
+	$args = array(
+		'widget_id' => $id, 
+		'current_postid' => $current_postid,
+		'options' => $opts,
+	);
 	?>
 	<div class="umrp-shortcode" id="<?php echo $id?>">
-		<?php if( $query_args['title'] ){ ?>
-		<h3 class="umrp-title"><?php echo $query_args['title']?></h3>
+		<?php if( $opts['title'] ){ ?>
+		<h3 class="umrp-title"><?php echo $opts['title']?></h3>
 		<?php } ?>
-		<div class="umrp-container <?php echo $class?>">
-			<?php echo $this->get_the_list($query_args);?>
-			<!--<?php echo $query_string?>-->
+		<div id="<?php echo $id?>-container" class="umrp-container <?php echo $container_class?>">
+			<?php echo $this->the_list_for_shortcode($args);?>
+			<!--<?php echo json_encode($opts)?>-->
 		</div>
 	</div>
 	<?php
 }
 
-function ajax() {
-	check_ajax_referer( $this->id.'_nonce' );
-	
-	switch( $_POST['action_scope'] ):
-		
-		case 'get_widget_option':
-		$opts = $this->get_widget_option( $_POST['widget_id'] );
-		$opts['cookiepath'] = COOKIEPATH;
-		echo json_encode( $opts );
-		break;
-		
-		case 'the_list_for_widget':
-		$this->the_list_for_widget( $_POST['widget_id'], $_POST['paged'], $_POST['current_postid'] );
-		break;
-		
-		case 'the_list_for_shortcode':
-		$this->the_list_for_shortcode( $_POST['widget_id'], (array) $_POST['options'], $_POST['paged'], $_POST['current_postid'] );
-		break;
-		
-	endswitch;	
-	die();
-}
 
 function filter_where( $where = '' ) {
 	$d = get_query_var('umrp_time_limit');
@@ -271,13 +312,6 @@ function filter_where( $where = '' ) {
 	return $where;
 }
 
-
-function get_widget_option($widget_id){
-	$opts = get_option('widget_'.$this->id);
-	$widget_id = (int) preg_replace('/'.$this->id.'-/', '', $widget_id);
-	$opts = $opts[$widget_id];
-	return $opts;
-}
 
 function get_post_thumbnail( $post_id, $w, $h ){
 	$thumb_id = get_post_meta($post_id, '_thumbnail_id', true);
@@ -352,27 +386,39 @@ function widget($args, $instance) {
 	global $umrp, $post;
 	
 	extract($args);
-	$title = apply_filters('widget_title', $instance['title']);
-	echo $before_widget;
-	if( $title ) echo $before_title . $title . $after_title;
 	
-	$class = $current_postid = '';
+	$title = apply_filters('widget_title', $instance['title']);
+	$id = (int) str_replace('umrp-', '', $widget_id);
+	
+	$container_class = 'widget-type';
+	$current_postid = '';
 	if( is_single() ){
-		$class = 'single postid-'.$post->ID;
+		$container_class .= ' single postid-'.$post->ID;
 		$current_postid = $post->ID;
 	}
-	?>
-	<div class="umrp-container <?php echo $class?>">
-		<?php $umrp->the_list_for_widget( $widget_id, '', $current_postid );?>
-	</div>
-	<?php 
+	
 	if( !empty($instance['custom_css']) ){
-		$css = $instance['custom_css'];
-		$css = str_replace('%widget_id%', '#'.$args['widget_id'], $css);
-		$css = preg_replace('/(\r|\n)/', '', $css);
-		echo '<style>'.$css.'</style>';
+		$custom_css = preg_replace('/%widget_id%/', '#'.$widget_id.'-container', $instance['custom_css']);
+		$custom_css = preg_replace('/(\r|\n)/', '', $custom_css);
+		$custom_css = '<style>'.$custom_css.'</style>';
 	}
 	
+	$args = array(
+		'widget_id' => $widget_id, 
+		'current_postid' => $current_postid,
+	);
+	
+	echo $before_widget;
+	if( $title ) 
+		echo $before_title.$title.$after_title;
+	?>
+	
+	<div id="umrp-<?php echo $id?>-container" class="umrp-container <?php echo $container_class?>">
+		<?php $umrp->the_list_for_widget( $args );?>
+	</div>
+	
+	<?php 
+	echo $custom_css;
 	echo $after_widget;
 }
 

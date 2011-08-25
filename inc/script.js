@@ -1,30 +1,31 @@
 
-var UMRP_Widget = function(t, widget_type){
+var UMRP_Widget = function(t){
 	var $ = jQuery;
-	var widget_id = t.id;
-	var container = $(t).find('.umrp-container');
+	var $t = $(t);
+	var widget_id = t.id.replace('-container', '');
+	var widget_type = $t.hasClass('widget-type') ? 'widget' : ($t.hasClass('shortcode-type') ? 'shortcode' : '');
 	var list, progress, nav;
-	var options = {}, current_postid, auto_paginate_t;
+	var options = {}, current_postid = '', auto_paginate_t;
 	
 	var init = function(){
 		resign_elements();
 		
-		if( container.hasClass('single') ){
-			var match = /postid-(\d+)/.exec( container.attr('class') );
+		if( $t.hasClass('single') ){
+			var match = /postid-(\d+)/.exec( $t.attr('class') );
 			current_postid = match ? match[1] : '';
+			$t.removeClass('single');
 		}else{
 			UMRP_Cookie.remove_cookie(widget_id);
 		}
 		
 		nav.find('a').live('click', function(){
-			var match = /umrp-page=(\d+)/.exec(this.href);
-			var paged = match ? match[1] : '';
+			var paged = Number(this.hash.replace('#', ''));
 			disappear(paged);
 			UMRP_Cookie.add_cookie(widget_id, paged, options.cookiepath);
 			return false;
 		});
 		
-		container.hover(
+		$t.hover(
 			function(){
 				$(this).addClass('pause');
 			},
@@ -46,11 +47,10 @@ var UMRP_Widget = function(t, widget_type){
 				
 				if( options.auto_paginate )
 					next_page();
-				
 			}, 'json');
 		
 		}else if( widget_type=='shortcode'){
-			options = /<!--(.*)-->/.exec(container.html());
+			options = /<!--(.*)-->/.exec($t.html());
 			options = $.parseJSON(options[1]);
 		}
 		
@@ -58,9 +58,9 @@ var UMRP_Widget = function(t, widget_type){
 	}
 	
 	var resign_elements = function(){
-		list = container.find('ul');
-		progress = container.find('.umrp-progress');
-		nav = container.find('.umrp-nav');
+		list = $t.find('.umrp-list');
+		progress = $t.find('.umrp-progress');
+		nav = $t.find('.umrp-nav');
 		
 		var list_pos = list.position();
 		progress.css({top: list_pos.top});
@@ -74,7 +74,7 @@ var UMRP_Widget = function(t, widget_type){
 			_ajax_nonce: umrp_vars.nonce,
 			widget_id: widget_id,
 			paged: paged,
-			current_postid: current_postid ? current_postid : ''
+			current_postid: current_postid
 		}
 		
 		if( widget_type=='widget' ){
@@ -86,14 +86,13 @@ var UMRP_Widget = function(t, widget_type){
 		}
 		
 		$.post(umrp_vars.ajaxurl, data, function(html){
-			container.html(html);
+			$t.html(html);
 			resign_elements();
 			appear();
 		});
 	}
 	
 	var appear = function(){
-		var w = $(t).width();
 		var h = list.height();
 		list.css({height: h});
 		
@@ -109,8 +108,8 @@ var UMRP_Widget = function(t, widget_type){
 			break;
 			
 			case 'slidein':
-			wrap_for_slide();
-			list.css({left: w}).animate({left:0}, dur);
+			var wrap = wrap_for_slide();
+			list.css({left: wrap.width()}).animate({left:0}, dur);
 			break;
 		};
 		
@@ -119,7 +118,6 @@ var UMRP_Widget = function(t, widget_type){
 	}
 	
 	var disappear = function(paged){
-		var w = $(t).width();
 		var h = list.height();
 		list.css({height: h});
 			
@@ -140,8 +138,8 @@ var UMRP_Widget = function(t, widget_type){
 			break;
 			
 			case 'slideout':
-			wrap_for_slide();
-			list.animate({left:-w}, dur, '', function(){
+			var wrap = wrap_for_slide();
+			list.animate({left:-(wrap.width())}, dur, '', function(){
 				get_list(paged);
 			});
 			break;
@@ -155,9 +153,13 @@ var UMRP_Widget = function(t, widget_type){
 	}
 	
 	var wrap_for_slide = function(){
-		var w = $(t).width();
+		var w = $t.width();
 		var h = list.height();
-		var wrap = container.find('div.umrp-slide');
+		var margin = parseInt(list.css('margin-left'))
+		margin += parseInt(list.css('padding-left'));
+		list.width( w-margin );
+		
+		var wrap = $t.find('div.umrp-slide');
 		if( !wrap.length ){
 			wrap = $('<div class="umrp-slide"/>').css({width: w, height: h});
 			list.wrap(wrap);
@@ -180,14 +182,13 @@ var UMRP_Widget = function(t, widget_type){
 	}
 	
 	var load_next_page = function(){
-		if( container.hasClass('pause') ){
+		if( $t.hasClass('pause') ){
 			next_page();
 		}else{
 			var _nav = nav.eq(0);
 			_nav.find('.next').click();
 		}
 	}
-	
 	
 	init();
 }
@@ -229,11 +230,8 @@ var UMRP_Cookie = {
 
 
 jQuery(function(){
-	jQuery('.widget_umrp').each(function(){ 
-		new UMRP_Widget( this, 'widget' );
-	});
-	jQuery('.umrp-shortcode').each(function(){ 
-		new UMRP_Widget( this, 'shortcode' );
+	jQuery('.umrp-container').each(function(){ 
+		new UMRP_Widget( this );
 	});
 });
 

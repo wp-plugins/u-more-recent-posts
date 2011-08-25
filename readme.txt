@@ -4,7 +4,7 @@ Donate link:
 Tags: AJAX, widget, post, recent posts, paginate, navigation, custom post type
 Requires at least: 3.1
 Tested up to: 3.2.1
-Stable tag: 1.4
+Stable tag: 1.4.1
 
 This plugin make it possible to navigate more recent posts without refreshing screen.
 
@@ -40,6 +40,10 @@ http://urlless.com/u-more-recent-posts/
 2. Widget configuration.
 
 == Changelog ==
+
+= 1.4.1 =
+*Changed: DOM Structure
+*Fixed: Slide effect
 
 = 1.4 =
 *Added: List formatting(title, date, author, comment_count, thumbnail)
