@@ -71,7 +71,7 @@ function ajax() {
 			'paged' => $_POST['paged'],
 			'current_postid' => $_POST['current_postid'], 
 		);
-		$this->the_list_for_widget( $args );
+		echo $this->get_the_list_for_widget( $args );
 		break;
 		
 		case 'the_list_for_shortcode':
@@ -81,7 +81,7 @@ function ajax() {
 			'current_postid' => $_POST['current_postid'], 
 			'options' => (array) $_POST['options'],
 		);
-		$this->the_list_for_shortcode( $args );
+		echo $this->get_the_list_for_shortcode( $args );
 		break;
 		
 	endswitch;	
@@ -95,19 +95,19 @@ function get_widget_option($widget_id){
 	return $opts;
 }
 
-function the_list_for_widget( $args ){
+function get_the_list_for_widget( $args ){
 	if( empty($args['widget_id']) )
 		return false;
 	$args['options'] = $this->get_widget_option( $args['widget_id'] );
 	$args['cookie_key'] = 'wp-'.$args['widget_id'].'-paged';
-	echo $this->get_the_list($args);
+	return $this->get_the_list($args);
 }
 
-function the_list_for_shortcode( $args ){
+function get_the_list_for_shortcode( $args ){
 	if( empty($args['widget_id']) )
 		return false;
 	$args['cookie_key'] = 'wp-'.$args['widget_id'].'-paged';
-	echo $this->get_the_list( $args );
+	return $this->get_the_list( $args );
 }
 
 function get_the_list( $args ){
@@ -292,17 +292,16 @@ function shortcode_display($atts){
 		'current_postid' => $current_postid,
 		'options' => $opts,
 	);
-	?>
-	<div class="umrp-shortcode" id="<?php echo $id?>">
-		<?php if( $opts['title'] ){ ?>
-		<h3 class="umrp-title"><?php echo $opts['title']?></h3>
-		<?php } ?>
-		<div id="<?php echo $id?>-container" class="umrp-container <?php echo $container_class?>">
-			<?php echo $this->the_list_for_shortcode($args);?>
-			<!--<?php echo json_encode($opts)?>-->
-		</div>
-	</div>
-	<?php
+	
+	$ret = '<div class="umrp-shortcode" id="'.$id.'">';
+	if( $opts['title'] )
+		$ret .= '<h3 class="umrp-title">'.$opts['title'].'</h3>';
+	$ret .= '<div id="'.$id.'-container" class="umrp-container '.$container_class.'">';
+	$ret .= $this->get_the_list_for_shortcode($args);
+	$ret .= '<!--'.json_encode($opts).'-->';
+	$ret .= '</div>';
+	$ret .= '</div>';
+	return $ret;
 }
 
 
@@ -414,7 +413,7 @@ function widget($args, $instance) {
 	?>
 	
 	<div id="umrp-<?php echo $id?>-container" class="umrp-container <?php echo $container_class?>">
-		<?php $umrp->the_list_for_widget( $args );?>
+		<?php echo $umrp->get_the_list_for_widget( $args );?>
 	</div>
 	
 	<?php 
